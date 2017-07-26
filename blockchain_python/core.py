@@ -26,6 +26,13 @@ class Block:
     def jsonify(self):
         return self.__dict__
 
+    def stringify(self):
+        return json.dumps(self.jsonify())
+
+    def verify(self):
+        prefix = '0' * self.difficulty
+        return( (self.hash).startswith(prefix) )
+
     def print_block(self):
         print("Block:\n\tData:\t\t", self.data)
         print("\tPrevious Hash:\t", self.previous_hash[:10])
@@ -41,31 +48,6 @@ class Block:
     @staticmethod
     def build_from_json(json_dict):
         block = Block(json_dict['data'], json_dict['previous_hash'])
-        block.difficulty = json_dict['difficulty']
-        block.nonce = json_dict['difficulty']
+        block.difficulty = int(json_dict['difficulty'])
+        block.nonce = int(json_dict['nonce'])
         return block
-
-blockchain = [Block.generate_genesis_block()]
-top_block = blockchain[-1]
-top_block.print_block()
-
-for iter in range(10):
-    next_block = Block({"Data": "Block number " + str(iter)}, top_block.hash)
-    blockchain.append(next_block)
-    top_block = next_block
-    top_block.print_block()
-
-chain_to_send = [block.jsonify() for block in blockchain]
-chain_to_send = json.dumps(chain_to_send)
-print(chain_to_send)
-print(type(chain_to_send))
-
-recv_chain = json.loads(chain_to_send)
-print(recv_chain)
-print(type(recv_chain))
-
-block = Block.build_from_json(recv_chain[-1])
-block.print_block()
-
-def test_flask():
-    return chain_to_send
