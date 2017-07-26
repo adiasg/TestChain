@@ -11,13 +11,11 @@ blockchain = test_blockchain.build_blockchain()
 
 @app.route('/')
 def index():
-    page = "Index page"
-    return page
+    return render_template('index.html')
 
 @app.route('/status')
 def status():
-    page = "Length of blockchain: " + str(len(blockchain)) + "\n" + "<br>"
-    return page
+    return render_template('status.html', blockchain_length=len(blockchain))
 
 @app.route('/blocks')
 def send_blocks():

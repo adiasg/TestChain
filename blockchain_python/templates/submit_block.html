@@ -4,14 +4,44 @@
         <title>
             Append block
         </title>
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='w3.css')}}">
+        <!--
         <style>
             .form-element {
                 display: inline-block;
                 width: 10%
             }
         </style>
+        -->
     </head>
     <body>
+        <div class="w3-bar w3-black">
+            <a href="/" class="w3-bar-item w3-button">Home</a>
+            <a href="/status" class="w3-bar-item w3-button">Status</a>
+            <a href="/blocks" class="w3-bar-item w3-button">Blocks</a>
+            <a href="/submit/block" class="w3-bar-item w3-button">Submit Block</a>
+        </div>
+
+        <div class="w3-container w3-teal">
+            <h2>Submit block</h2>
+        </div>
+
+        <form class="w3-containers" method="POST">
+            <label class="w3-text">Data:</label>
+            <input class="w3-input w3-border w3-light-grey" name="data" type="text" value="Some data">
+            <label class="w3-text">Previous Hash:</label>
+            <input class="w3-input w3-border w3-light-grey" name="previous_hash" type="text" value="Some previous hash">
+            <label class="w3-text">Difficulty:</label>
+            <input class="w3-input w3-border w3-light-grey" name="difficulty" type="number" value=2>
+            <label class="w3-text">Nonce:</label>
+            <input class="w3-input w3-border w3-light-grey" name="nonce" type="number" value=0>
+            </br>
+            <div style="display: block">
+                <button class="w3-btn w3-blue-grey">Submit</button>
+            </div>
+        </form>
+
+        <!--
         <form action="" method="POST">
             <div class="form-element">Data:</div><input type="text" name="data" value="Some data"><br>
             <div class="form-element">Previous Hash:</div><input type="text" name="previous_hash" value="Some previous hash"><br>
@@ -19,5 +49,6 @@
             <div class="form-element">Nonce:</div><input type="number" name="nonce" value=0><br>
             <input type="submit" value="Submit">
         </form>
+        -->
     </body>
 </html>

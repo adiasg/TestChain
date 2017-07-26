@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>
+            Status
+        </title>
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='w3.css')}}">
+    </head>
+    <body class="w3-grey">
+        <div class="w3-bar w3-black">
+            <a href="/" class="w3-bar-item w3-button">Home</a>
+            <a href="/status" class="w3-bar-item w3-button">Status</a>
+            <a href="/blocks" class="w3-bar-item w3-button">Blocks</a>
+            <a href="/submit/block" class="w3-bar-item w3-button">Submit Block</a>
+        </div>
+
+        <div class="w3-container w3-teal">
+            <h2>Current Status</h2>
+        </div>
+        </hr>
+
+        <br>
+
+        <div class="w3-card w3-third" style="margin: 20px 10px">
+            <div class="w3-container w3-green" align="center">
+                <h2>
+                    Current blockchain length
+                <h2>
+                <h1>
+                    {{ blockchain_length }}
+                </h1>
+            </div>
+        </div>
+    </body>
+</html>
