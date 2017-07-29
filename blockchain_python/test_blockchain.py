@@ -17,8 +17,8 @@ def build_blockchain(verbose=False):
     return blockchain
 
 def make_json(blockchain):
-    chain_to_send = [block.jsonify() for block in blockchain]
-    chain_to_send = json.dumps(chain_to_send)
+    chain_to_send = [block.jsonify() for block in reversed(blockchain)]
+    #chain_to_send = json.dumps(chain_to_send)
     #print(chain_to_send)
     print("type(chain_to_send):", type(chain_to_send))
     return chain_to_send

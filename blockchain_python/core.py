@@ -4,9 +4,9 @@ import json
 class Block:
     def __init__(self, data, previous_hash):
         self.data = data
-        self.previous_hash = previous_hash
-        self.nonce = 0
         self.difficulty = 1
+        self.nonce = 0
+        self.previous_hash = previous_hash
         self.hash = self.hash_block()
         if(self.previous_hash!='0'):
             self.mine_block()
