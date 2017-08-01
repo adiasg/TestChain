@@ -1,35 +1,25 @@
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>
-            Status
-        </title>
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='w3.css')}}">
-    </head>
-    <body>
-        <div class="w3-bar w3-black">
-            <a href="/" class="w3-bar-item w3-button">Home</a>
-            <a href="/status" class="w3-bar-item w3-button">Status</a>
-            <a href="/blocks" class="w3-bar-item w3-button">Blocks</a>
-            <a href="/submit/block" class="w3-bar-item w3-button">Submit Block</a>
-        </div>
+{% extends "base.html" %}
 
-        <div class="w3-container w3-teal">
-            <h2>Current Status</h2>
-        </div>
-        </hr>
+{% block title%}Status{% endblock %}
 
-        <br>
+{% block body %}
+    <div class="w3-container w3-teal">
+        <h2>Current Status</h2>
+    </div>
 
-        <div class="w3-card w3-third" style="margin: 20px 10px">
-            <div class="w3-container w3-green" align="center">
-                <h2>
-                    Current blockchain length
-                <h2>
-                <h1>
-                    {{ blockchain_length }}
-                </h1>
+    {% for status_item in status_data %}
+        <div class="w3-third w3-cell">
+            <div class="w3-card" style="margin: 4% 3%">
+                <div class="w3-container w3-green w3-padding" align="center">
+                    <h2>
+                        {{ status_item }}
+                    <h2>
+                    <h1>
+                        {{ status_data[status_item] }}
+                    </h1>
+                </div>
             </div>
         </div>
-    </body>
-</html>
+    {% endfor %}
+
+{% endblock %}

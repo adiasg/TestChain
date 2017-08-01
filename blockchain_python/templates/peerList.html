@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Peer List{% endblock %}
+
+{% block body %}
+    <div class="w3-container w3-purple w3-center">
+        <h1>Peer List</h1>
+    </div>
+    <table class="w3-card-4 w3-table w3-striped w3-centered" style="margin: 25px auto; width: 45%">
+        <tr>
+            <th class="w3-deep-purple"><h2>Peer IP</h2></th>
+        </tr>
+        {% for item in peerList %}
+        <tr>
+            <td>{{item}}</td>
+        </tr>
+        {% endfor %}
+    </table>
+{% endblock %}
