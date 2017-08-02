@@ -1,10 +1,13 @@
 import hashlib
 import json
+import pickle
+import sqlite3
+from flask import g, Flask, current_app
 
 class Node:
-    def __init__(self):
+    def __init__(self, DbName, app):
         self.peerList = ["127.0.0.1"]
-        self.blockchain = Blockchain()
+        self.blockchain = Blockchain(DbName, app)
 
     def getStatus(self):
         return self.blockchain.getStatus()
@@ -13,8 +16,14 @@ class Node:
         self.blockchain.buildTestBlockchain(numberOfBlocks)
 
 class Blockchain:
-    def __init__(self):
-        self.blockchain = [Block.generateGenesisBlock()]
+    def __init__(self, DbName, app):
+        self.connectionToDb = sqlite3.connect(DbName)
+        self.cursor = self.connectionToDb.cursor()
+        self.cursor.execute("DROP TABLE IF EXISTS test")
+        self.cursor.execute("CREATE TABLE test(hash STRING, block STRING)")
+        genesisBlock = Block.generateGenesisBlock()
+        self.cursor.execute("INSERT INTO test VALUES (?, ?)", (genesisBlock.hash, pickle.dumps(genesisBlock)) )
+        self.topHash = genesisBlock.hash
         self.blockchainLength = 0
         self.sumOfDifficuties = 0
 
@@ -22,21 +31,47 @@ class Blockchain:
         return {"Current Blockchain Length": self.blockchainLength, "Sum Of Difficulties": self.sumOfDifficuties}
 
     def buildTestBlockchain(self, numberOfBlocks):
-        top_block = self.blockchain[-1]
+        #print("buildTestBlockchain()")
+        top_block = self.getBlock(self.topHash)
+        top_block.printBlock()
 
         for iter in range(1,numberOfBlocks+1):
             next_block = Block({"Data": "Block number " + str(iter)}, top_block.hash)
             self.addBlock(next_block)
             top_block = next_block
 
+    def getBlock(self, hash):
+        return [ pickle.loads(row[1]) for row in self.cursor.execute( "SELECT * FROM test WHERE hash = ?" , (hash, ) ) ][0]
+
     def addBlock(self, block):
-        self.blockchain.append(block)
-        self.blockchainLength += 1
+        # TODO Verify before adding
+        #print("addBlock()")
+        self.cursor.execute('INSERT INTO test VALUES (?,?)', (block.hash, pickle.dumps(block)))
+        newHeight = self.findHeight(block.hash)
+        if(newHeight > self.blockchainLength):
+            self.topHash = block.hash
+            self.blockchainLength = newHeight
+        self.connectionToDb.commit()
+
+    def findHeight(self, hash):
+        #print("findHeight()")
+        block = self.getBlock(hash)
+        height = 0
+        genesisPreviousHash = '0'*64
+        while(block.previousHash!=genesisPreviousHash):
+            block = self.getBlock(block.previousHash)
+            height += 1
+        print("Height:", height)
+        return height
 
     def jsonify(self):
-        chain_to_send = [block.jsonify() for block in reversed(self.blockchain)]
-        return chain_to_send
-
+        chain_to_send = []
+        block = self.getBlock(self.topHash)
+        chain_to_send.append(block.jsonify())
+        genesisPreviousHash = '0'*64
+        while(block.previousHash!=genesisPreviousHash):
+            block = self.getBlock(block.previousHash)
+            chain_to_send.append(block.jsonify())
 
 class Block:
     def __init__(self, data, previousHash, mine=True):

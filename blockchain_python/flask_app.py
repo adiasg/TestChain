@@ -6,7 +6,7 @@ import json
 
 app = Flask(__name__)
 
-node = Node()
+node = Node('test.db', app)
 node.buildTestNode(10)
 
 @app.route('/')
