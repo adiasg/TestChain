@@ -1,7 +1,7 @@
 import hashlib
 import json
 import pickle
-import sqlite3
+import psycopg2
 from flask import g, Flask, current_app
 
 class Node:
@@ -17,12 +17,14 @@ class Node:
 
 class Blockchain:
     def __init__(self, DbName, app):
-        self.connectionToDb = sqlite3.connect(DbName)
+        connect_str = " dbname='myproject' user='myprojectuser' host='localhost' password='password' "
+        self.connectionToDb = psycopg2.connect(connect_str)
         self.cursor = self.connectionToDb.cursor()
-        self.cursor.execute("DROP TABLE IF EXISTS test")
-        self.cursor.execute("CREATE TABLE test(hash STRING, block STRING)")
+        self.cursor.execute("DROP TABLE IF EXISTS test;")
+        self.cursor.execute("CREATE TABLE test(hash text, block bytea);")
         genesisBlock = Block.generateGenesisBlock()
-        self.cursor.execute("INSERT INTO test VALUES (?, ?)", (genesisBlock.hash, pickle.dumps(genesisBlock)) )
+        #print("PICKLE OF GEN BLK\n", type(pickle.dumps(genesisBlock)), pickle.dumps(genesisBlock))
+        self.cursor.execute("INSERT INTO test VALUES (%s, %s);", (genesisBlock.hash, pickle.dumps(genesisBlock)) )
         self.topHash = genesisBlock.hash
         self.blockchainLength = 0
         self.sumOfDifficuties = 0
@@ -33,7 +35,6 @@ class Blockchain:
     def buildTestBlockchain(self, numberOfBlocks):
         #print("buildTestBlockchain()")
         top_block = self.getBlock(self.topHash)
-        top_block.printBlock()
 
         for iter in range(1,numberOfBlocks+1):
             next_block = Block({"Data": "Block number " + str(iter)}, top_block.hash)
@@ -41,12 +42,17 @@ class Blockchain:
             top_block = next_block
 
     def getBlock(self, hash):
-        return [ pickle.loads(row[1]) for row in self.cursor.execute( "SELECT * FROM test WHERE hash = ?" , (hash, ) ) ][0]
+        self.cursor.execute( "SELECT * FROM test WHERE hash = %s;" , (hash, ) )
+        res = self.cursor.fetchone()
+        block = pickle.loads(res[1])
+        #block.printBlock()
+        return block
 
     def addBlock(self, block):
         # TODO Verify before adding
         #print("addBlock()")
-        self.cursor.execute('INSERT INTO test VALUES (?,?)', (block.hash, pickle.dumps(block)))
+        block.setHeight( (self.getPreviousBlock(block)).height + 1 )
+        self.cursor.execute('INSERT INTO test VALUES (%s,%s);', (block.hash, pickle.dumps(block)))
         newHeight = self.findHeight(block.hash)
         if(newHeight > self.blockchainLength):
             self.topHash = block.hash
@@ -54,15 +60,21 @@ class Blockchain:
         self.connectionToDb.commit()
 
     def findHeight(self, hash):
-        #print("findHeight()")
+        #print("findHeight()")getBlock
         block = self.getBlock(hash)
         height = 0
         genesisPreviousHash = '0'*64
         while(block.previousHash!=genesisPreviousHash):
-            block = self.getBlock(block.previousHash)
+            block = self.getPreviousBlock(block)
             height += 1
-        print("Height:", height)
+        #print("Height:", height)
         return height
+
+    def getPreviousBlock(self, block):
+        if(block.previousHash!='0'*64):
+            return self.getBlock(block.previousHash)
+        else:
+            return "Block not found"
 
     def jsonify(self):
         chain_to_send = []
@@ -72,6 +84,7 @@ class Blockchain:
         while(block.previousHash!=genesisPreviousHash):
             block = self.getBlock(block.previousHash)
             chain_to_send.append(block.jsonify())
+        return chain_to_send
 
 class Block:
     def __init__(self, data, previousHash, mine=True):
@@ -80,8 +93,13 @@ class Block:
         self.nonce = 0
         self.previousHash = previousHash
         self.hash = self.hashBlock()
+        self.height = -1
         if(mine):
             self.mineBlock()
+
+    def setHeight(self, height):
+        self.height = height
+        return
 
     def hashBlock(self):
         sha = hashlib.sha256()
@@ -117,6 +135,7 @@ class Block:
     def generateGenesisBlock():
         block = Block({"Data": "Genesis Block"}, '0'*64, False)
         block.difficulty = 0
+        block.setHeight(0)
         block.mineBlock()
         return block
 

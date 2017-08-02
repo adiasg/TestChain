@@ -19,7 +19,7 @@ def status():
 
 @app.route('/blocks')
 def sendBlocks():
-    return render_template('blocks.html', blockchain=node.blockchain.jsonify(), block_display_order=['data', 'difficulty', 'nonce', 'previousHash', 'hash'])
+    return render_template('blocks.html', blockchain=node.blockchain.jsonify(), block_display_order=['data', 'difficulty', 'nonce', 'previousHash', 'hash', 'height'])
 
 @app.route('/submit/block',  methods=['GET','POST'])
 def submitBlock():
