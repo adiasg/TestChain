@@ -22,15 +22,10 @@
             <div class="w3-card-4 w3-half" style="margin: 1% 25%" >
 
                 <div class="w3-container w3-theme w3-padding w3-center">
-                    <span class="w3-badge w3-jumbo w3-left w3-theme-d5 w3-margin-right">{{ block['height'] }}</span></li><h2>Block</h2>
+                    <span class="w3-round w3-jumbo w3-left w3-theme-d5 w3-margin-right">{{ block['height'] }}</span></li><h2>Block</h2>
                 </div>
 
                 <div class="w3-container w3-padding w3-theme-l1">
-                    <!--
-                    {% for key in block %}
-                        <span><strong style="display: inline-block; width: 17%">{{key}}</strong></span>: {{block[key]}} <br>
-                    {% endfor %}
-                    -->
                     {% for key in block_display_order %}
                         <span><strong style="display: inline-block; width: 17%">{{key}}</strong></span>: {{block[key]}} <br>
                     {% endfor %}

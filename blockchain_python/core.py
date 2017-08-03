@@ -2,11 +2,12 @@ import hashlib
 import json
 import pickle
 import psycopg2
+import requests
 from flask import g, Flask, current_app
 
 class Node:
     def __init__(self, DbName, app):
-        self.peerList = ["127.0.0.1"]
+        self.peerList = []
         self.blockchain = Blockchain(DbName, app)
 
     def getStatus(self):
@@ -14,6 +15,25 @@ class Node:
 
     def buildTestNode(self, numberOfBlocks):
         self.blockchain.buildTestBlockchain(numberOfBlocks)
+
+    def peerConnect(self, peerIp):
+        if(peerIp not in self.peerList):
+            self.peerList.append(peerIp)
+
+    def getTopHash(self):
+        return self.blockchain.topHash
+
+    def queryPeerTopHash(self, peer):
+        print("queryPeerTopHash")
+        print('http://'+peer+':5000/topHash')
+        print(requests.post('http://'+peer+':5000/topHash').json())
+        return requests.post('http://'+peer+':5000/topHash').json()
+
+    def scanTopHash(self):
+        topHashList = {}
+        for peer in self.peerList:
+            topHashList[peer] = self.queryPeerTopHash(peer)
+        return topHashList
 
 class Blockchain:
     def __init__(self, DbName, app):
@@ -49,15 +69,15 @@ class Blockchain:
         return block
 
     def addBlock(self, block):
-        # TODO Verify before adding
         #print("addBlock()")
-        block.setHeight( (self.getPreviousBlock(block)).height + 1 )
-        self.cursor.execute('INSERT INTO test VALUES (%s,%s);', (block.hash, pickle.dumps(block)))
-        newHeight = self.findHeight(block.hash)
-        if(newHeight > self.blockchainLength):
-            self.topHash = block.hash
-            self.blockchainLength = newHeight
-        self.connectionToDb.commit()
+        if(block.verify()):
+            block.setHeight( (self.getPreviousBlock(block)).height + 1 )
+            self.cursor.execute('INSERT INTO test VALUES (%s,%s);', (block.hash, pickle.dumps(block)))
+            newHeight = self.findHeight(block.hash)
+            if(newHeight > self.blockchainLength):
+                self.topHash = block.hash
+                self.blockchainLength = newHeight
+            self.connectionToDb.commit()
 
     def findHeight(self, hash):
         #print("findHeight()")getBlock
