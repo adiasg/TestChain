@@ -9,6 +9,6 @@ setup(name='funniest',
       license='MIT',
       packages=['blockchain_python'],
       install_requires=[
-          'flask', 'json', 'sys', 'hashlib', 'pickle', 'psycopg2', 'requests', 
+          'flask', 'psycopg2', 'netifaces' 
       ],
       zip_safe=False)

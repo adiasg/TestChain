@@ -3,7 +3,7 @@ import json
 import pickle
 import psycopg2
 import requests
-from flask import g, Flask, current_app
+import netifaces
 
 class Node:
     def __init__(self, DbName, app):
@@ -20,19 +20,34 @@ class Node:
     def buildTestNode(self, numberOfBlocks):
         self.blockchain.buildTestBlockchain(numberOfBlocks)
 
-    def peerConnect(self, peerIp):
-        if(peerIp!='127.0.0.1'):
-            if(peerIp not in self.peerList):
-                self.peerList.append(peerIp)
+    def getLocalIp(self):
+        localIpList = []
+        interfaces = netifaces.interfaces()
 
-    def getTopHash(self):
-        return self.blockchain.topHash
+        for interface in interfaces:
+            ifaddress = netifaces.ifaddresses(interface)
+            if(netifaces.AF_INET in ifaddress):
+                link = netifaces.ifaddresses(interface)[netifaces.AF_INET][0]
+                localIpList.append(link['addr'])
+            if(netifaces.AF_INET6 in ifaddress):
+                link = netifaces.ifaddresses(interface)[netifaces.AF_INET6][0]
+                localIpList.append(link['addr'])
+        return localIpList
+
+    def peerConnect(self, peerIp):
+        if(peerIp not in self.peerList):
+            localIpList = self.getLocalIp()
+            if(peerIp not in localIpList):
+                self.peerList.append(peerIp)
 
     def queryPeerTopHash(self, peer):
         print("queryPeerTopHash")
         print('http://'+peer+':5000/topHash')
         print(requests.post('http://'+peer+':5000/topHash').json())
         return requests.post('http://'+peer+':5000/topHash').json()
+
+    def getTopHash(self):
+        return self.blockchain.topHash
 
     def scanTopHash(self):
         topHashList = {}
