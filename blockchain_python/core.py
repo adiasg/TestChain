@@ -9,16 +9,21 @@ class Node:
     def __init__(self, DbName, app):
         self.peerList = []
         self.blockchain = Blockchain(DbName, app)
+        self.nodeDeclaration = {"isPeer": "yes"}
 
     def getStatus(self):
         return self.blockchain.getStatus()
+
+    def getNodeDeclaration(self):
+        return json.dumps(self.nodeDeclaration)
 
     def buildTestNode(self, numberOfBlocks):
         self.blockchain.buildTestBlockchain(numberOfBlocks)
 
     def peerConnect(self, peerIp):
-        if(peerIp not in self.peerList):
-            self.peerList.append(peerIp)
+        if(peerIp!='127.0.0.1'):
+            if(peerIp not in self.peerList):
+                self.peerList.append(peerIp)
 
     def getTopHash(self):
         return self.blockchain.topHash

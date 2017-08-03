@@ -1,15 +1,19 @@
 from flask import Flask, render_template, request, redirect, url_for
 from core import Block, Blockchain, Node
 import json
+import sys
 
 app = Flask(__name__)
 
 node = Node('test.db', app)
 node.buildTestNode(10)
 
-@app.route('/')
+@app.route('/', methods=['GET','POST'])
 def index():
-    return render_template('index.html')
+    if(request.method=='GET'):
+        return render_template('index.html')
+    else:
+        return node.getNodeDeclaration()
 
 @app.route('/status')
 def status():
@@ -53,4 +57,7 @@ def topHash():
     else:
         return json.dumps({'topHash': node.getTopHash()})
 
-app.run(debug=True)
+if(len(sys.argv)>1 and sys.argv[1]=='deploy'):
+    app.run(host='0.0.0.0', debug=False)
+else:
+    app.run(debug=True)
