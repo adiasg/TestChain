@@ -6,7 +6,7 @@ import sys
 app = Flask(__name__)
 
 node = Node('test.db', app)
-node.buildTestNode(10)
+node.buildTestNode(20)
 
 @app.route('/', methods=['GET','POST'])
 def index():
@@ -14,6 +14,10 @@ def index():
         return render_template('index.html')
     else:
         return node.getNodeDeclaration()
+
+@app.route('/debug', methods=['GET','POST'])
+def debug():
+    return "Debug page"
 
 @app.route('/status')
 def status():
@@ -23,14 +27,12 @@ def status():
 def blocksDisplay():
     return render_template('blocks_display.html', blockchain=node.blockchain.jsonify(), block_display_order=['data', 'difficulty', 'nonce', 'previousHash', 'hash', 'height'])
 
-@app.route('/blocks/request')
+@app.route('/blocks/request', methods=['GET','POST'])
 def blockRequest():
-    try:
+    if request.method=='GET':
+        return render_template('block_request.html')
+    else:
         return node.getBlock(request.form['hash'])
-    except:
-        page = "Invalid request<br>"
-        page += "request.form: " + json.dumps(request.form) + "<br>"
-        return page
 
 @app.route('/blocks/submit', methods=['GET','POST'])
 def blockSubmit():
@@ -50,6 +52,12 @@ def blockSubmit():
             page += "request.form: " + json.dumps(request.form) + "<br>"
             return page
 
+@app.route('/blocks/sync', methods=['GET','POST'])
+def syncBlocks():
+    if request.method=='POST':
+        print("syncBlocks POST")
+        return node.receiveSyncWithPeer(json.loads(request.data.decode('utf-8')))
+
 @app.route('/peerList')
 def peerList():
     return render_template('peerList.html', peerList=node.peerList)
@@ -65,6 +73,13 @@ def topHash():
         return render_template('topHash.html', topHash=node.getTopHash())
     else:
         return json.dumps({'topHash': node.getTopHash()})
+
+@app.route('/topHash/chain', methods=['GET','POST'])
+def topHashChain():
+    if request.method=='GET':
+        return render_template('topHashChain.html', topHashChain=node.getTopHashChain())
+    else:
+        return json.dumps(node.getTopHashChain())
 
 if(len(sys.argv)>1 and sys.argv[1]=='deploy'):
     app.run(host='0.0.0.0', debug=False)

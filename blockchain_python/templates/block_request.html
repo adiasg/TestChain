@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Request Block{% endblock %}
+
+{% block body %}
+
+    <div class="w3-container w3-teal">
+        <h2>Request Block</h2>
+    </div>
+
+    <form class="w3-containers" method="POST">
+        <label class="w3-text"><strong>Hash:</strong></label>
+        <input class="w3-input w3-border w3-light-grey" name="hash" type="text" value="Hash">
+        <br>
+        <br>
+        <div style="display: block">
+            <button class="w3-btn w3-blue-grey">Request</button>
+        </div>
+    </form>
+
+{% endblock %}

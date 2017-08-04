@@ -5,6 +5,8 @@ import psycopg2
 import requests
 import netifaces
 
+# TODO error handle for all db gets
+
 class Node:
     def __init__(self, DbName, app):
         self.peerList = []
@@ -49,7 +51,7 @@ class Node:
                 self.peerList.append(peerIp)
 
     def queryNodeDeclaration(self, peerIp):
-        return requests.post('http://'+peer+':5000/', timeout=5).json()
+        return requests.post('http://'+peerIp+':5000/', timeout=5).json()
 
     def queryPeerState(self, peerIp):
         state = self.queryPeerTopHash(peerIp)
@@ -63,9 +65,6 @@ class Node:
         return self.peerState
 
     def queryPeerTopHash(self, peer):
-        print("queryPeerTopHash")
-        print('http://'+peer+':5000/topHash')
-        print(requests.post('http://'+peer+':5000/topHash').json())
         return requests.post('http://'+peer+':5000/topHash').json()
 
     def getTopHash(self):
@@ -78,8 +77,36 @@ class Node:
         return topHashList
 
     def getBlock(self, hash):
-        return self.blockchain.getBlock(hash).stringify()
+        block = self.blockchain.getBlock(hash)
+        if(block is None):
+            # TODO error handling
+            return(None)
+        return block.stringify()
 
+    def getTopHashChain(self):
+        number_of_hashes_to_send = 10
+        return self.blockchain.getTopHashChain(number_of_hashes_to_send)
+
+    def initiateSyncPeer(self, peerIp):
+        requests.post('http://'+peer+':5000/blocks/sync', json=self.getTopHashChain())
+
+    def receiveSyncWithPeer(self, peerTopHashChain):
+        print("receiveSyncWithPeer")
+        print(peerTopHashChain)
+        print([row for row in peerTopHashChain.values()])
+        if(self.getTopHash() in peerTopHashChain.values()):
+            # node is behind of peer by relativeTopHashIndex blocks
+            relativeTopHashIndex = 0
+            for index in peerTopHashChain:
+                if(peerTopHashChain[index]==self.getTopHash()):
+                    relativeTopHashIndex = index
+                    break
+            return json.dumps({'state': '-'+relativeTopHashIndex})
+        else:
+            # node is ahead of peer or chain is forked
+            return json.dumps({'state': 'ahead/forked'})
+            
+        return json.dumps(peerTopHashChain)
 
 class Blockchain:
     def __init__(self, DbName, app):
@@ -110,10 +137,16 @@ class Blockchain:
     def getBlock(self, hash):
         self.cursor.execute( "SELECT * FROM test WHERE hash = %s;" , (hash, ) )
         res = self.cursor.fetchone()
-        # TODO error handling
+        if(res is None):
+            return None
         block = pickle.loads(res[1])
-        #block.printBlock()
         return block
+
+    def getTopHashChain(self, number_of_hashes_to_send):
+        topHashChain = { 0: self.topHash}
+        for iter in range(1, number_of_hashes_to_send):
+            topHashChain[iter] = self.getPreviousHash(topHashChain[iter-1])
+        return topHashChain
 
     def addBlock(self, block):
         #print("addBlock()")
@@ -142,6 +175,13 @@ class Blockchain:
             return self.getBlock(block.previousHash)
         else:
             return "Block not found"
+
+    def getPreviousHash(self, hash):
+        if(hash=='0'*64):
+            return None
+        else:
+            # TODO error handling
+            return self.getBlock(hash).previousHash
 
     def jsonify(self):
         chain_to_send = []

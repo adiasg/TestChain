@@ -1,6 +1,6 @@
 from setuptools import setup
 
-setup(name='funniest',
+setup(name='blockchain_python',
       version='0.1',
       description='A basic version of blockchain_python',
       url='http://github.com/adiasg/blockchain_python',
@@ -9,6 +9,6 @@ setup(name='funniest',
       license='MIT',
       packages=['blockchain_python'],
       install_requires=[
-          'flask', 'psycopg2', 'netifaces' 
+          'flask', 'psycopg2', 'netifaces'
       ],
       zip_safe=False)
