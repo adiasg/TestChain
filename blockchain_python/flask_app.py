@@ -54,11 +54,13 @@ def blockSubmit():
 
 @app.route('/blocks/sync', methods=['GET','POST'])
 def syncBlocks():
+    print("syncBlocks")
     if request.method=='POST':
-        print("syncBlocks POST")
+        print("POST")
         return node.receiveSyncPeer(json.loads(request.data.decode('utf-8')))
     else:
-        return node.initiateSyncPeer(request.remote_addr)
+        print("GET")
+        return node.initiateSyncPeer(request.remote_addr, "None")
 
 @app.route('/peerList')
 def peerList():

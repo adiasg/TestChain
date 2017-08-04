@@ -90,7 +90,8 @@ class Node:
     def initiateSyncPeer(self, peerIp, syncMsg):
         print("initiateSyncPeer")
         print("syncMsg", syncMsg)
-        return requests.post('http://'+peer+':5000/blocks/sync', json=self.getTopHashChain())
+        print("peerIp", peerIp)
+        return requests.post('http://'+peerIp+':5000/blocks/sync', json=self.getTopHashChain()).text
 
     def receiveSyncPeer(self, peerTopHashChain):
         print("receiveSyncPeer")
