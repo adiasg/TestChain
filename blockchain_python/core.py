@@ -87,13 +87,15 @@ class Node:
         number_of_hashes_to_send = 10
         return self.blockchain.getTopHashChain(number_of_hashes_to_send)
 
-    def initiateSyncPeer(self, peerIp):
-        requests.post('http://'+peer+':5000/blocks/sync', json=self.getTopHashChain())
+    def initiateSyncPeer(self, peerIp, syncMsg):
+        print("initiateSyncPeer")
+        print("syncMsg", syncMsg)
+        return requests.post('http://'+peer+':5000/blocks/sync', json=self.getTopHashChain())
 
-    def receiveSyncWithPeer(self, peerTopHashChain):
-        print("receiveSyncWithPeer")
-        print(peerTopHashChain)
-        print([row for row in peerTopHashChain.values()])
+    def receiveSyncPeer(self, peerTopHashChain):
+        print("receiveSyncPeer")
+        #print(peerTopHashChain)
+        #print([row for row in peerTopHashChain.values()])
         if(self.getTopHash() in peerTopHashChain.values()):
             # node is behind of peer by relativeTopHashIndex blocks
             relativeTopHashIndex = 0
@@ -105,8 +107,6 @@ class Node:
         else:
             # node is ahead of peer or chain is forked
             return json.dumps({'state': 'ahead/forked'})
-            
-        return json.dumps(peerTopHashChain)
 
 class Blockchain:
     def __init__(self, DbName, app):
