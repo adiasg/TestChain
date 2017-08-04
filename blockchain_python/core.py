@@ -52,7 +52,9 @@ class Node:
         return requests.post('http://'+peer+':5000/', timeout=5).json()
 
     def queryPeerState(self, peerIp):
-        return self.queryPeerTopHash(peerIp)
+        state = self.queryPeerTopHash(peerIp)
+        state['nodeDeclaration'] = self.queryNodeDeclaration(peerIp)
+        return state
 
     def scanPeerState(self):
         self.peerState = {}
