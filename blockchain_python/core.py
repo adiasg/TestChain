@@ -8,6 +8,7 @@ import netifaces
 class Node:
     def __init__(self, DbName, app):
         self.peerList = []
+        self.peerState = {}
         self.blockchain = Blockchain(DbName, app)
         self.nodeDeclaration = {"isPeer": "yes"}
 
@@ -38,7 +39,25 @@ class Node:
         if(peerIp not in self.peerList):
             localIpList = self.getLocalIp()
             if(peerIp not in localIpList):
-                self.peerList.append(peerIp)
+                # TODO error handling
+                try:
+                    peerDeclaration = self.queryNodeDeclaration(peerIp)
+                    if("isPeer" in peerDeclaration and peerDeclaration['isPeer']=='yes'):
+                        self.peerList.append(peerIp)
+                except:
+                    print("Failed to add", peerIp, "\nCheck Node.peerConnect()")
+
+    def queryNodeDeclaration(self, peerIp):
+        return requests.post('http://'+peer+':5000/', timeout=5).json()
+
+    def queryPeerState(self, peerIp):
+        return {peerIp: self.queryPeerTopHash(peerIp)}
+
+    def scanPeerState(self):
+        self.peerState = {}
+        for peerIp in self.peerList:
+            peerState.append(self.queryPeerState(peerIp))
+        return self.peerState
 
     def queryPeerTopHash(self, peer):
         print("queryPeerTopHash")
@@ -54,6 +73,10 @@ class Node:
         for peer in self.peerList:
             topHashList[peer] = self.queryPeerTopHash(peer)
         return topHashList
+
+    def getBlock(self, hash):
+        return self.blockchain.getBlock(hash).stringify()
+
 
 class Blockchain:
     def __init__(self, DbName, app):
@@ -74,16 +97,17 @@ class Blockchain:
 
     def buildTestBlockchain(self, numberOfBlocks):
         #print("buildTestBlockchain()")
-        top_block = self.getBlock(self.topHash)
+        topBlock = self.getBlock(self.topHash)
 
         for iter in range(1,numberOfBlocks+1):
-            next_block = Block({"Data": "Block number " + str(iter)}, top_block.hash)
-            self.addBlock(next_block)
-            top_block = next_block
+            nextBlock = Block({"Data": "Block number " + str(iter)}, topBlock.hash)
+            self.addBlock(nextBlock)
+            topBlock = nextBlock
 
     def getBlock(self, hash):
         self.cursor.execute( "SELECT * FROM test WHERE hash = %s;" , (hash, ) )
         res = self.cursor.fetchone()
+        # TODO error handling
         block = pickle.loads(res[1])
         #block.printBlock()
         return block

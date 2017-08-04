@@ -17,14 +17,23 @@ def index():
 
 @app.route('/status')
 def status():
-    return render_template('status.html', status_data=node.getStatus(), topHashList=node.scanTopHash())
+    return render_template('status.html', status_data=node.getStatus(), peerState=node.scanPeerState())
 
-@app.route('/blocks')
-def blocks():
-    return render_template('blocks.html', blockchain=node.blockchain.jsonify(), block_display_order=['data', 'difficulty', 'nonce', 'previousHash', 'hash', 'height'])
+@app.route('/blocks/display')
+def blocksDisplay():
+    return render_template('blocks_display.html', blockchain=node.blockchain.jsonify(), block_display_order=['data', 'difficulty', 'nonce', 'previousHash', 'hash', 'height'])
+
+@app.route('/blocks/request')
+def blockRequest():
+    try:
+        return node.getBlock(request.form['hash'])
+    except:
+        page = "Invalid request<br>"
+        page += "request.form: " + json.dumps(request.form) + "<br>"
+        return page
 
 @app.route('/blocks/submit', methods=['GET','POST'])
-def submitBlock():
+def blockSubmit():
     if request.method=='GET':
         return render_template('submit_block.html')
     else:
@@ -35,7 +44,7 @@ def submitBlock():
             elif(request.form['mine']=="on"):
                 block.mineBlock()
                 node.blockchain.addBlock(block)
-            return render_template('blocks.html', heading="Block Added", blockchain=node.blockchain.jsonify(), block_display_order=['data', 'difficulty', 'nonce', 'previousHash', 'hash'])
+            return render_template('blocks_display.html', heading="Block Added", blockchain=node.blockchain.jsonify(), block_display_order=['data', 'difficulty', 'nonce', 'previousHash', 'hash'])
         except:
             page = "Invalid request<br>"
             page += "request.form: " + json.dumps(request.form) + "<br>"

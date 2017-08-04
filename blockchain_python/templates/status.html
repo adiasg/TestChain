@@ -7,21 +7,23 @@
         <h2>Current Status</h2>
     </div>
 
-    {% for status_item in status_data %}
-        <div class="w3-third w3-cell">
-            <div class="w3-card" style="margin: 4% 3%">
-                <div class="w3-container w3-green w3-padding" align="center">
-                    <h2>
-                        {{ status_item }}
-                    <h2>
-                    <h1>
-                        {{ status_data[status_item] }}
-                    </h1>
+    <div class="w3-container">
+        {% for status_item in status_data %}
+            <div class="w3-third w3-cell">
+                <div class="w3-card" style="margin: 4% 3%">
+                    <div class="w3-container w3-green w3-padding" align="center">
+                        <h2>
+                            {{ status_item }}
+                        <h2>
+                        <h1>
+                            {{ status_data[status_item] }}
+                        </h1>
+                    </div>
                 </div>
             </div>
-        </div>
-    {% endfor %}
+        {% endfor %}
+    </div>
 
-    {{topHashList}}
+    {{peerState}}
 
 {% endblock %}
