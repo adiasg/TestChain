@@ -40,12 +40,13 @@ class Node:
             localIpList = self.getLocalIp()
             if(peerIp not in localIpList):
                 # TODO error handling
-                try:
+                '''try:
                     peerDeclaration = self.queryNodeDeclaration(peerIp)
                     if("isPeer" in peerDeclaration and peerDeclaration['isPeer']=='yes'):
                         self.peerList.append(peerIp)
                 except:
-                    print("Failed to add", peerIp, "\nCheck Node.peerConnect()")
+                    print("Failed to add", peerIp, "\nCheck Node.peerConnect()")'''
+                self.peerList.append(peerIp)
 
     def queryNodeDeclaration(self, peerIp):
         return requests.post('http://'+peer+':5000/', timeout=5).json()
