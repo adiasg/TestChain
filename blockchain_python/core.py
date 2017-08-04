@@ -9,7 +9,7 @@ import netifaces
 
 class Node:
     def __init__(self, DbName, app):
-        self.peerList = []
+        self.peerList = ['localhost']
         self.peerState = {}
         self.blockchain = Blockchain(DbName, app)
         self.nodeDeclaration = {"isPeer": "yes"}
@@ -107,7 +107,7 @@ class Node:
             return json.dumps({'state': '-'+relativeTopHashIndex})
         else:
             # node is ahead of peer or chain is forked
-            return json.dumps({'state': 'ahead/forked'})
+            return json.dumps(self.getTopHashChain())
 
 class Blockchain:
     def __init__(self, DbName, app):

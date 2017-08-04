@@ -6,7 +6,7 @@ import sys
 app = Flask(__name__)
 
 node = Node('test.db', app)
-node.buildTestNode(22)
+node.buildTestNode(18)
 
 @app.route('/', methods=['GET','POST'])
 def index():
@@ -18,6 +18,13 @@ def index():
 @app.route('/debug', methods=['GET','POST'])
 def debug():
     return "Debug page"
+
+@app.route('/initiateSync', methods=['GET','POST'])
+def initiateSync():
+    if request.method=='GET':
+        return render_template('initiateSync.html', peerList=node.peerList)
+    else:
+        return node.initiateSyncPeer(request.form['peerIp'], "None")
 
 @app.route('/status')
 def status():
@@ -59,8 +66,8 @@ def syncBlocks():
         print("POST")
         ini_req = ""
         state = node.receiveSyncPeer(json.loads(request.data.decode('utf-8')))
-        if(state['state']=="ahead/forked"):
-            ini_req = node.initiateSyncPeer(request.remote_addr, "ahead/forked")
+        #if(json.loads(state)['state']=="ahead/forked"):
+            #ini_req = node.initiateSyncPeer(request.remote_addr, "ahead/forked")
         return str(state) + str(ini_req)
     else:
         print("GET")
@@ -90,6 +97,6 @@ def topHashChain():
         return json.dumps(node.getTopHashChain())
 
 if(len(sys.argv)>1 and sys.argv[1]=='deploy'):
-    app.run(host='0.0.0.0', debug=False)
+    app.run(host='0.0.0.0', debug=False, threaded=True)
 else:
     app.run(debug=True)
