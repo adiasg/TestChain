@@ -6,7 +6,7 @@ import sys
 app = Flask(__name__)
 
 node = Node('test.db', app)
-node.buildTestNode(18)
+node.buildTestNode(16)
 
 @app.route('/', methods=['GET','POST'])
 def index():
@@ -65,7 +65,7 @@ def syncBlocks():
     if request.method=='POST':
         print("POST")
         ini_req = ""
-        state = node.receiveSyncPeer(json.loads(request.data.decode('utf-8')))
+        state = node.receiveSyncPeer(request.remote_addr, json.loads(request.data.decode('utf-8')))
         #if(json.loads(state)['state']=="ahead/forked"):
             #ini_req = node.initiateSyncPeer(request.remote_addr, "ahead/forked")
         return str(state) + str(ini_req)

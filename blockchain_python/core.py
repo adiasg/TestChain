@@ -4,12 +4,13 @@ import pickle
 import psycopg2
 import requests
 import netifaces
+import os
 
 # TODO error handle for all db gets
 
 class Node:
     def __init__(self, DbName, app):
-        self.peerList = ['localhost']
+        self.peerList = []
         self.peerState = {}
         self.blockchain = Blockchain(DbName, app)
         self.nodeDeclaration = {"isPeer": "yes"}
@@ -93,10 +94,10 @@ class Node:
         print("peerIp", peerIp)
         return requests.post('http://'+peerIp+':5000/blocks/sync', json=self.getTopHashChain()).text
 
-    def receiveSyncPeer(self, peerTopHashChain):
+    def receiveSyncPeer(self, peerIp, peerTopHashChain):
         print("receiveSyncPeer")
-        #print(peerTopHashChain)
-        #print([row for row in peerTopHashChain.values()])
+        print(peerTopHashChain)
+        print([row for row in peerTopHashChain.values()])
         if(self.getTopHash() in peerTopHashChain.values()):
             # node is behind of peer by relativeTopHashIndex blocks
             relativeTopHashIndex = 0
@@ -104,6 +105,21 @@ class Node:
                 if(peerTopHashChain[index]==self.getTopHash()):
                     relativeTopHashIndex = index
                     break
+
+            pid = os.fork()
+            if pid == 0:
+                print(os.getpid(), ": Was just created.")
+                print(os.getpid(), ": Requesting blocks")
+                for iter in range(int(relativeTopHashIndex)-1,-1,-1):
+                    #print("Requesting:", iter)
+                    block = Block.buildFromJson(requests.post('http://'+peerIp+':5000/blocks/request', data={'hash': peerTopHashChain[str(iter)]}).json())
+                    block.printBlock()
+                    self.blockchain.addBlock(block)
+                print(os.getpid(), ": Exiting")
+                os._exit(0)
+            else:
+                print(os.getpid(), "just created", pid)
+
             return json.dumps({'state': '-'+relativeTopHashIndex})
         else:
             # node is ahead of peer or chain is forked
@@ -154,6 +170,7 @@ class Blockchain:
         if(block.verify()):
             block.setHeight( (self.getPreviousBlock(block)).height + 1 )
             self.cursor.execute('INSERT INTO test VALUES (%s,%s);', (block.hash, pickle.dumps(block)))
+            # TODO longest chain based on sumOfDifficuties
             newHeight = self.findHeight(block.hash)
             if(newHeight > self.blockchainLength):
                 self.topHash = block.hash
