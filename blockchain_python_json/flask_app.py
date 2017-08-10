@@ -55,7 +55,7 @@ def serve_block():
 def serve_block_submit():
     # TODO verify json
     node.addBlock(request.json)
-    return jsonify({'block':'recieved'})
+    return jsonify({'block':'received'})
 
 @app.route('/connect', methods=['POST'])
 def serve_connect():
@@ -70,10 +70,17 @@ def serve_peerList():
 
 @app.route('/block/sync', methods=['POST'])
 def serve_block_sync():
-    print('GET')
-    if not request.json or not 'topHash' in request.json:
+    print('serve_block_sync')
+    if request.json:
+        print('request.json')
+        if 'topHash' in request.json:
+            print('topHash')
+            return jsonify(node.receiveSync(request.remote_addr, request.json['topHash']))
+        elif 'topHashChain' in request.json:
+            print('topHashChain')
+            return jsonify(node.receiveTopHashChain(request.remote_addr, request.json['topHashChain']))
+    else:
         abort(400)
-    return jsonify(node.recieveSync(request.remote_addr, request.json['topHash']))
 
 @app.route('/block/sync/initiate', methods=['POST'])
 def serve_block_sync_initiate():

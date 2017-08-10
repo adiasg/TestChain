@@ -74,7 +74,7 @@ class Node:
                 if('isPeer' in peerDeclaration and peerDeclaration['isPeer'] is True):
                     self.peerList.append(peerIp)
 
-    def recieveSync(self, peerIp, peerTopHash):
+    def receiveSync(self, peerIp, peerTopHash):
         if self.blockchain.getBlock(peerTopHash) is None:
             return {'status': 'lagging', 'topHash': self.blockchain.getTopHash()}
         else:
@@ -92,12 +92,12 @@ class Node:
                     return {'status': 'Sent topHashChain', 'peerStatus': status_response['status']}
                 elif status_response['status'] is 'leading' and topHashChain in status_response:
                     # TODO async call queryBlocksFromPeer(peerIp, status_response['topHashChain'])
-                    return {'status': 'Recieved topHashChain', 'peerStatus': status_response['status']}
+                    return {'status': 'received topHashChain', 'peerStatus': status_response['status']}
         return {'error': 'Node.initiateSync()'}
 
-    def recieveTopHashChain(self, peerIp, topHashChain):
+    def receiveTopHashChain(self, peerIp, topHashChain):
         # TODO async call queryBlocksFromPeer(peerIp, status_response['topHashChain'])
-        return {'status': 'Recieved topChainHash'}
+        return {'status': 'received topChainHash'}
 
     def queryBlockFromPeer(self, peerIp, hash):
         url = 'http://'+peerIp+':5000/block/request'
