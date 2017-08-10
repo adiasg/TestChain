@@ -87,10 +87,33 @@ class Node:
             # TODO this throws exception on timeout
             status_response = requests.get(url, json=data, timeout=5).json()
             if status_response is not None and 'status' in status_response:
-                if status_response['status'] is 'lagging':
+                if status_response['status'] is 'lagging' and 'topHash' in status_response:
                     # TODO async post getTopChainHash(status_response['topHash']) to some endpoint
-                    return {'status': 'Sync initiated'}
+                    return {'status': 'Sent topHashChain', 'peerStatus': status_response['status']}
+                elif status_response['status'] is 'leading' and topHashChain in status_response:
+                    # TODO async call queryBlocksFromPeer(peerIp, status_response['topHashChain'])
+                    return {'status': 'Recieved topHashChain', 'peerStatus': status_response['status']}
         return {'error': 'Node.initiateSync()'}
+
+    def recieveTopHashChain(self, peerIp, topHashChain):
+        # TODO async call queryBlocksFromPeer(peerIp, status_response['topHashChain'])
+        return {'status': 'Recieved topChainHash'}
+
+    def queryBlockFromPeer(self, peerIp, hash):
+        url = 'http://'+peerIp+':5000/block/request'
+        data = {'hash': hash}
+        block_json = requests.post(url, data, timeout=5)
+        # TODO verify block
+        block = Block.buildFromJson(block_json)
+        #
+        if block is not None:
+            self.blockchain.addBlock(block)
+
+    def queryBlocksFromPeer(self, peerIp, topHashChain):
+        for hash in topHashChain:
+            # TODO query blocks in order
+            self.queryBlockFromPeer(peerIp, hash)
+
 
 class Blockchain:
     def __init__(self):
