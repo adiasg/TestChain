@@ -5,8 +5,16 @@ import psycopg2
 import requests
 import netifaces
 import os
+from flask import g
 
 # TODO error handle for all db gets
+
+class UserDefinedError(Exception):
+    def __init__(self, msg):
+        self.msg = msg
+
+def get_cursor():
+    return g.connectionToDb.cursor()
 
 class Node:
     def __init__(self, DbName, app):
@@ -38,18 +46,29 @@ class Node:
                 localIpList.append(link['addr'])
         return localIpList
 
-    def peerConnect(self, peerIp):
+    def peerConnect(self, peerIp, peerDeclaration=None):
+        print('peerConnect()')
         if(peerIp not in self.peerList):
             localIpList = self.getLocalIp()
             if(peerIp not in localIpList):
                 # TODO error handling
-                '''try:
-                    peerDeclaration = self.queryNodeDeclaration(peerIp)
+                try:
+                    if(peerDeclaration is None):
+                        peerDeclaration = self.queryNodeDeclaration(peerIp)
                     if("isPeer" in peerDeclaration and peerDeclaration['isPeer']=='yes'):
                         self.peerList.append(peerIp)
                 except:
-                    print("Failed to add", peerIp, "\nCheck Node.peerConnect()")'''
-                self.peerList.append(peerIp)
+                    print("Failed to add", peerIp, "\nCheck Node.peerConnect()")
+
+    def connectToPeer(self, peerIp):
+        print('connectToPeer()')
+        try:
+            if(peerIp not in self.peerList):
+                localIpList = self.getLocalIp()
+                if(peerIp not in localIpList):
+                    requests.post('http://'+request.form['peerIp']+':5000/connect', timeout=5, data=node.getNodeDeclaration())
+        except:
+            print('Error in Blockchain.connectToPeer(), peerIp=', peerIp)
 
     def queryNodeDeclaration(self, peerIp):
         return requests.post('http://'+peerIp+':5000/', timeout=5).json()
@@ -66,7 +85,7 @@ class Node:
         return self.peerState
 
     def queryPeerTopHash(self, peer):
-        return requests.post('http://'+peer+':5000/topHash').json()
+        return requests.post('http://'+peer+':5000/topHash', timeout=5).json()
 
     def getTopHash(self):
         return self.blockchain.topHash
@@ -92,7 +111,7 @@ class Node:
         print("initiateSyncPeer")
         print("syncMsg", syncMsg)
         print("peerIp", peerIp)
-        return requests.post('http://'+peerIp+':5000/blocks/sync', json=self.getTopHashChain()).text
+        return requests.post('http://'+peerIp+':5000/blocks/sync', json=self.getTopHashChain(), timeout=5).text
 
     def receiveSyncPeer(self, peerIp, peerTopHashChain):
         print("receiveSyncPeer")
@@ -106,36 +125,34 @@ class Node:
                     relativeTopHashIndex = index
                     break
 
-            pid = os.fork()
-            if pid == 0:
-                print(os.getpid(), ": Was just created.")
-                print(os.getpid(), ": Requesting blocks")
-                for iter in range(int(relativeTopHashIndex)-1,-1,-1):
-                    #print("Requesting:", iter)
-                    block = Block.buildFromJson(requests.post('http://'+peerIp+':5000/blocks/request', data={'hash': peerTopHashChain[str(iter)]}).json())
-                    block.printBlock()
-                    self.blockchain.addBlock(block)
-                print(os.getpid(), ": Exiting")
-                os._exit(0)
-            else:
-                print(os.getpid(), "just created", pid)
+            for iter in range(int(relativeTopHashIndex)-1,-1,-1):
+                #print("Requesting:", iter)
+                block = queryPeerBlock(peerIp, peerTopHashChain[str(iter)])
+                block.printBlock()
+                self.blockchain.addBlock(block)
 
             return json.dumps({'state': '-'+relativeTopHashIndex})
         else:
             # node is ahead of peer or chain is forked
             return json.dumps(self.getTopHashChain())
 
+    def queryPeerBlock(self, peerIp, hash):
+        return Block.buildFromJson(requests.post('http://'+peerIp+':5000/blocks/request', data={'hash': hash}.json(), timeout=5))
+
 class Blockchain:
     def __init__(self, DbName, app):
-        connect_str = " dbname='myproject' user='myprojectuser' host='localhost' password='password' "
-        self.connectionToDb = psycopg2.connect(connect_str)
-        self.cursor = self.connectionToDb.cursor()
-        self.cursor.execute("DROP TABLE IF EXISTS test;")
-        self.cursor.execute("CREATE TABLE test(hash text, block bytea);")
+        #print('Blockchain.__init__')
+        cursor = get_cursor()
+        cursor.execute("DROP TABLE IF EXISTS test;")
+        cursor.execute("CREATE TABLE test(hash text, block bytea);")
+        g.connectionToDb.commit()
         genesisBlock = Block.generateGenesisBlock()
-        #print("PICKLE OF GEN BLK\n", type(pickle.dumps(genesisBlock)), pickle.dumps(genesisBlock))
-        self.cursor.execute("INSERT INTO test VALUES (%s, %s);", (genesisBlock.hash, pickle.dumps(genesisBlock)) )
+        #print('Generated genesis block')
+        #genesisBlock.printBlock()
+        cursor.execute("INSERT INTO test VALUES (%s, %s);", (genesisBlock.hash, pickle.dumps(genesisBlock)) )
+        cursor.close()
         self.topHash = genesisBlock.hash
+        #print('topHash:', self.topHash)
         self.blockchainLength = 0
         self.sumOfDifficuties = 0
 
@@ -143,21 +160,31 @@ class Blockchain:
         return {"Current Blockchain Length": self.blockchainLength, "Sum Of Difficulties": self.sumOfDifficuties}
 
     def buildTestBlockchain(self, numberOfBlocks):
-        #print("buildTestBlockchain()")
+        print("buildTestBlockchain()")
         topBlock = self.getBlock(self.topHash)
 
         for iter in range(1,numberOfBlocks+1):
-            nextBlock = Block({"Data": "Block number " + str(iter)}, topBlock.hash)
+            #print('iter:', iter, 'topHash:', self.topHash)
+            nextBlock = Block({"Data": "Block number " + str(iter)}, topBlock.hash, mine=True)
             self.addBlock(nextBlock)
             topBlock = nextBlock
 
     def getBlock(self, hash):
-        self.cursor.execute( "SELECT * FROM test WHERE hash = %s;" , (hash, ) )
-        res = self.cursor.fetchone()
-        if(res is None):
-            return None
-        block = pickle.loads(res[1])
-        return block
+        #print('Blockchain.getBlock()')
+        #print('hash:', hash)
+        try:
+            cursor = get_cursor()
+            cursor.execute( "SELECT * FROM test WHERE hash = %s;" , (hash, ) )
+            res = cursor.fetchone()
+            if(res is None):
+                print('Returning None')
+                print('hash:', hash)
+                return None
+            block = pickle.loads(res[1])
+            cursor.close()
+            return block
+        except:
+            raise UserDefinedError('error in Blockchain.getBlock()' + hash)
 
     def getTopHashChain(self, number_of_hashes_to_send):
         topHashChain = { 0: self.topHash}
@@ -167,18 +194,34 @@ class Blockchain:
 
     def addBlock(self, block):
         #print("addBlock()")
-        if(block.verify()):
-            block.setHeight( (self.getPreviousBlock(block)).height + 1 )
-            self.cursor.execute('INSERT INTO test VALUES (%s,%s);', (block.hash, pickle.dumps(block)))
-            # TODO longest chain based on sumOfDifficuties
-            newHeight = self.findHeight(block.hash)
-            if(newHeight > self.blockchainLength):
-                self.topHash = block.hash
-                self.blockchainLength = newHeight
-            self.connectionToDb.commit()
+        #block.printBlock()
+        try:
+            if(self.getBlock(block.hash) is None):
+                print('Block already added')
+            elif(block.verify()):
+                #print('Got previous height:', (self.getPreviousBlock(block)).height)
+                block.setHeight( (self.getPreviousBlock(block)).height + 1 )
+                #print('The height is set as', block.height)
+                cursor = get_cursor()
+                cursor.execute('INSERT INTO test VALUES (%s,%s);', (block.hash, pickle.dumps(block)))
+                # TODO longest chain based on sumOfDifficuties
+                newHeight = self.findHeight(block.hash)
+                if(newHeight > self.blockchainLength):
+                    self.topHash = block.hash
+                    self.blockchainLength = newHeight
+                g.connectionToDb.commit()
+                print('Added block with hash:', block.hash)
+                print('Block height:', block.height)
+                #self.getBlock(block.hash).printBlock()
+                #block.printBlock()
+            else:
+                print('Block not verified')
+                block.printBlock()
+        except:
+            raise UserDefinedError('error in Blockchain.addBlock()' + block.stringify())
 
     def findHeight(self, hash):
-        #print("findHeight()")getBlock
+        print("findHeight()")
         block = self.getBlock(hash)
         height = 0
         genesisPreviousHash = '0'*64
@@ -202,8 +245,11 @@ class Blockchain:
             return self.getBlock(hash).previousHash
 
     def jsonify(self):
+        #print('Blockchain.jsonify()')
         chain_to_send = []
         block = self.getBlock(self.topHash)
+        #print('block:')
+        #block.printBlock()
         chain_to_send.append(block.jsonify())
         genesisPreviousHash = '0'*64
         while(block.previousHash!=genesisPreviousHash):
@@ -212,7 +258,7 @@ class Blockchain:
         return chain_to_send
 
 class Block:
-    def __init__(self, data, previousHash, mine=True):
+    def __init__(self, data, previousHash, mine=False):
         self.data = data
         self.difficulty = 1
         self.nonce = 0
@@ -228,33 +274,52 @@ class Block:
 
     def hashBlock(self):
         sha = hashlib.sha256()
-        sha.update((str(self.data) + str(self.previousHash) + str(self.nonce)).encode('utf-8'))
-        return sha.hexdigest()
+        try:
+            sha.update((str(self.data) + str(self.previousHash) + str(self.nonce)).encode('utf-8'))
+            return sha.hexdigest()
+        except:
+            raise UserDefinedError('error in Block.hashBlock()' + self.stringify())
 
     def mineBlock(self):
         prefix = '0' * self.difficulty
-        while(not( ( self.hash ).startswith(prefix) )):
-            self.nonce += 1
-            self.hash = self.hashBlock()
-        return
+        try:
+            while(not( ( self.hash ).startswith(prefix) )):
+                self.nonce += 1
+                self.hash = self.hashBlock()
+            return
+        except:
+            raise UserDefinedError('error in Block.mineBlock()' + self.stringify())
 
     def jsonify(self):
-        return self.__dict__
+        try:
+            return self.__dict__
+        except:
+            raise UserDefinedError('error in Block.jsonify()')
 
     def stringify(self):
         return json.dumps(self.jsonify())
 
     def verify(self):
         prefix = '0' * self.difficulty
-        return( (self.hash).startswith(prefix) )
+        try:
+            return( (self.hash).startswith(prefix) )
+        except:
+            raise UserDefinedError('error in Block.verify()' + self.stringify())
 
     def printBlock(self):
-        print("Block:\n\tData:\t\t", self.data)
-        print("\tPrevious Hash:\t", self.previousHash[:10])
-        print("\tNonce:\t\t", self.nonce)
-        print("\tDifficulty:\t", self.difficulty)
-        print("\tHash:\t\t", self.hash[:10])
-        return
+        try:
+            print("Block:\n\tData:\t\t", self.data)
+            print("\tPrevious Hash:\t", self.previousHash[:10])
+            print("\tNonce:\t\t", self.nonce)
+            print("\tDifficulty:\t", self.difficulty)
+            print("\tHash:\t\t", self.hash[:10])
+            try:
+                print("\tHeight:\t\t", self.height)
+            except:
+                pass
+            return
+        except:
+            raise UserDefinedError('error in Block.printBlock()' + self.stringify())
 
     @staticmethod
     def generateGenesisBlock():
@@ -266,7 +331,10 @@ class Block:
 
     @staticmethod
     def buildFromJson(json_dict):
-        block = Block(json_dict['data'], json_dict['previousHash'])
-        block.difficulty = int(json_dict['difficulty'])
-        block.nonce = int(json_dict['nonce'])
-        return block
+        try:
+            block = Block(json_dict['data'], json_dict['previousHash'])
+            block.difficulty = int(json_dict['difficulty'])
+            block.nonce = int(json_dict['nonce'])
+            return block
+        except:
+            raise UserDefinedError('error in Block.buildFromJson()' + json.dumps(json_dict))

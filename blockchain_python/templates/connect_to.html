@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Connect To{% endblock %}
+
+{% block body %}
+
+    <div class="w3-container w3-teal">
+        <h2>Connect To</h2>
+    </div>
+
+    <form class="w3-containers" method="POST">
+        <label class="w3-text"><strong>Peer IP:</strong></label>
+        <input class="w3-input w3-border w3-light-grey" name="peerIp" type="text" value="IP Address">
+        <br>
+        <br>
+        <div style="display: block">
+            <button class="w3-btn w3-blue-grey">Connect</button>
+        </div>
+    </form>
+
+{% endblock %}
