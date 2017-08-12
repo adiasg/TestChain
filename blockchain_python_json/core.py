@@ -5,6 +5,7 @@ import pickle
 import psycopg2
 import netifaces
 import requests
+from threading import Thread
 
 class UserDefinedError(Exception):
     def __init__(self, msg):
@@ -88,24 +89,37 @@ class Node:
             status_response = requests.get(url, json=data, timeout=5).json()
             if status_response is not None and 'status' in status_response:
                 if status_response['status'] is 'lagging' and 'topHash' in status_response:
-                    # TODO async post getTopChainHash(status_response['topHash']) to some endpoint
+                    # async call sendTopChainHash(peerIp, status_response['topHash'])
+                    sendTopHashChainThread = Thread(target=sendTopHashChain, args=(peerIp, status_response['topHash'],))
+                    sendTopHashChainThread.setName('Thread-sendTopHashChainThread')
+                    sendTopHashChainThread.start()
                     return {'status': 'Sent topHashChain', 'peerStatus': status_response['status']}
                 elif status_response['status'] is 'leading' and topHashChain in status_response:
-                    # TODO async call queryBlocksFromPeer(peerIp, status_response['topHashChain'])
+                    # async call queryBlocksFromPeer(peerIp, status_response['topHashChain'])
+                    getTopHashChainThread = Thread(target=queryBlocksFromPeer, args=(peerIp, status_response['topHashChain'],))
+                    getTopHashChainThread.setName('Thread-getTopHashChainThread')
+                    getTopHashChainThread.start()
                     return {'status': 'received topHashChain', 'peerStatus': status_response['status']}
         return {'error': 'Node.initiateSync()'}
 
     def receiveTopHashChain(self, peerIp, topHashChain):
         # TODO async call queryBlocksFromPeer(peerIp, status_response['topHashChain'])
+        getTopHashChainThread = Thread(target=queryBlocksFromPeer, args=(peerIp, status_response['topHashChain'],))
+        getTopHashChainThread.setName('Thread-getTopHashChainThread')
+        getTopHashChainThread.start()
         return {'status': 'received topChainHash'}
+
+    def sendTopHashChain(self, peerIp, topHashChain):
+        url = 'http://'+peerIp+':5000/block/sync'
+        data = {'topHashChain': topHashChain}
+        requests.post(url, json=data, timeout=5)
 
     def queryBlockFromPeer(self, peerIp, hash):
         url = 'http://'+peerIp+':5000/block/request'
         data = {'hash': hash}
-        block_json = requests.post(url, data, timeout=5)
+        block_json = requests.post(url, json=data, timeout=5)
         # TODO verify block
         block = Block.buildFromJson(block_json)
-        #
         if block is not None:
             self.blockchain.addBlock(block)
 
@@ -257,6 +271,7 @@ class Blockchain:
             topBlock = nextBlock
 
     def getTopChainNumber(self, number_of_hashes_to_send):
+        # TODO handle no such block in db
         topHash = self.getTopHash()
         block = self.getBlock(topHash)
         topHashChain = {0: topHash}
@@ -268,6 +283,7 @@ class Blockchain:
         return topHashChain
 
     def getTopChainHash(self, last_hash_in_chain):
+        # TODO handle no such block in db
         topHash = self.getTopHash()
         block = self.getBlock(topHash)
         topHashChain = {0: topHash}
