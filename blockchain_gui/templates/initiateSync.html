@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 
-{% block title%}Initiate Sync Peer{% endblock %}
+{% block title%}Initiate Sync{% endblock %}
 
 {% block body %}
     <div class="w3-container w3-teal">
-        <h2>Initiate Sync Peer</h2>
+        <h2>Initiate Sync</h2>
     </div>
     <br>
 
     <form class="w3-containers" method="POST">
 
         <select class="w3-select" name="peerIp">
-            <option value="" disabled selected>Choose your option</option>
+            <option value="" disabled selected>Choose peer</option>
             {% for peer in peerList %}
                 <option value={{peer}}>{{peer}}</option>
             {% endfor %}

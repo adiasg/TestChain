@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, g, request, abort, redirect, url_for
 import json
 import psycopg2
+import sys
 from core import Block, Blockchain, Node
 
 app = Flask(__name__)
@@ -64,6 +65,13 @@ def serve_connect():
     node.connectPeer(request.remote_addr, request.json['nodeDeclaration'])
     return redirect(url_for('serve_index'))
 
+@app.route('/connect/to', methods=['POST'])
+def serve_connect_to():
+    if not request.json or not 'peerIp' in request.json:
+        abort(400)
+    node.addPeer(request.json['peerIp'])
+    return jsonify({'status': 'recieved request'})
+
 @app.route('/peerList', methods=['GET'])
 def serve_peerList():
     return jsonify(node.getPeerList())
@@ -88,4 +96,8 @@ def serve_block_sync_initiate():
         abort(400)
     return jsonify(node.initiateSync(request.json['peerIp']))
 
-app.run(debug=True)
+if __name__ == '__main__':
+    if(len(sys.argv)>1 and sys.argv[1]=='debug'):
+        app.run(debug=True)
+    else:
+        app.run(host='0.0.0.0', debug=False)

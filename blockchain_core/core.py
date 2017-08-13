@@ -49,8 +49,11 @@ class Node:
 
     def addBlock(self, block_json):
         # TODO error handling, verify that block json is valid
+        print('Node.addBlock()')
         block = self.blockchain.makeBlock(block_json)
         if block is not None:
+            print('block is not none')
+            block.printBlock()
             self.blockchain.addBlock(block)
 
     def getHostIps(self):
@@ -67,13 +70,15 @@ class Node:
                 hostIpList.append(link['addr'])
         return hostIpList
 
-    def connectPeer(self, peerIp, peerDeclaration):
+    def addPeer(self, peerIp):
         if(peerIp not in self.peerList):
             hostIpList = self.getHostIps()
             if(peerIp not in hostIpList):
-                # TODO error handling
-                if('isPeer' in peerDeclaration and peerDeclaration['isPeer'] is True):
-                    self.peerList.append(peerIp)
+                self.peerList.append(peerIp)
+
+    def connectPeer(self, peerIp, peerDeclaration):
+        if('isPeer' in peerDeclaration and peerDeclaration['isPeer'] is True):
+            self.addPeer(peerIp)
 
     def receiveSync(self, peerIp, peerTopHash):
         if self.blockchain.getBlock(peerTopHash) is None:
@@ -103,7 +108,7 @@ class Node:
         return {'error': 'Node.initiateSync()'}
 
     def receiveTopHashChain(self, peerIp, topHashChain):
-        # TODO async call queryBlocksFromPeer(peerIp, status_response['topHashChain'])
+        # async call queryBlocksFromPeer(peerIp, status_response['topHashChain'])
         getTopHashChainThread = Thread(target=queryBlocksFromPeer, args=(peerIp, status_response['topHashChain'],))
         getTopHashChainThread.setName('Thread-getTopHashChainThread')
         getTopHashChainThread.start()
@@ -136,8 +141,8 @@ class Blockchain:
         cursor.execute("DROP TABLE IF EXISTS blocks;")
         cursor.execute("CREATE TABLE blocks(hash text, block bytea);")
         g.connectionToDb.commit()
-        cursor.execute("DROP TABLE IF EXISTS tophash_store;")
-        cursor.execute("CREATE TABLE tophash_store(tophash text, hash text);")
+        cursor.execute("DROP TABLE IF EXISTS status;")
+        cursor.execute("CREATE TABLE status(key text, value text);")
         g.connectionToDb.commit()
         genesisBlock = Block.generateGenesisBlock()
         #print('Generated genesis block')
@@ -155,18 +160,18 @@ class Blockchain:
 
     def storeTopHash(self, topHash):
         cursor = get_cursor()
-        cursor.execute("SELECT hash FROM tophash_store WHERE tophash = %s;", ("topHash", ))
+        cursor.execute("SELECT value FROM status WHERE key = %s;", ("topHash", ))
         res = cursor.fetchone()
         if(res is None):
-            cursor.execute("INSERT INTO tophash_store VALUES (%s, %s);", ("topHash", topHash) )
+            cursor.execute("INSERT INTO status VALUES (%s, %s);", ("topHash", topHash) )
         else:
-            cursor.execute("UPDATE tophash_store SET hash = %s WHERE tophash = %s;", (topHash, "topHash",))
+            cursor.execute("UPDATE status SET value = %s WHERE key = %s;", (topHash, "topHash",))
         g.connectionToDb.commit()
         cursor.close()
 
     def getTopHash(self):
         cursor = get_cursor()
-        cursor.execute("SELECT hash FROM tophash_store WHERE tophash = %s;", ("topHash", ))
+        cursor.execute("SELECT value FROM status WHERE key = %s;", ("topHash", ))
         res = cursor.fetchone()
         topHash = None
         if(res is not None):
@@ -266,7 +271,7 @@ class Blockchain:
 
         for iter in range(1,numberOfBlocks+1):
             #print('iter:', iter, 'topHash:', self.topHash)
-            nextBlock = Block({"Data": "Block number " + str(iter)}, topBlock.hash, mine=True)
+            nextBlock = Block({"Data": "Block number " + str(iter)}, topBlock.hash, difficulty=2, mine=True)
             self.addBlock(nextBlock)
             topBlock = nextBlock
 
@@ -313,9 +318,9 @@ class Blockchain:
         return chain_to_send
 
 class Block:
-    def __init__(self, data, previousHash, mine=False):
+    def __init__(self, data, previousHash, difficulty=1, mine=False):
         self.data = data
-        self.difficulty = 1
+        self.difficulty = difficulty
         self.nonce = 0
         self.previousHash = previousHash
         self.hash = self.hashBlock()
@@ -382,7 +387,7 @@ class Block:
 
     @staticmethod
     def generateGenesisBlock():
-        block = Block({"Data": "Genesis Block"}, '0'*64, False)
+        block = Block({"Data": "Genesis Block"}, '0'*64, mine=False)
         block.difficulty = 0
         block.setHeight(0)
         block.mineBlock()
@@ -391,9 +396,12 @@ class Block:
     @staticmethod
     def buildFromJson(json_dict):
         try:
-            block = Block(json_dict['data'], json_dict['previousHash'])
-            block.difficulty = int(json_dict['difficulty'])
-            block.nonce = int(json_dict['nonce'])
+            # TODO mine for difficulty in json_dict
+            if('mine' in json_dict and json_dict['mine']=='on'):
+                block = Block(json_dict['data'], json_dict['previousHash'], difficulty=int(json_dict['difficulty']), mine=True)
+            else:
+                block = Block(json_dict['data'], json_dict['previousHash'])
+                block.nonce = int(json_dict['nonce'])
             return block
         except:
             print('Block.buildFromJson() returning None for:', json_dict)
