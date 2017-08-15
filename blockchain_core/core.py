@@ -7,9 +7,29 @@ import netifaces
 import requests
 from threading import Thread
 
-class UserDefinedError(Exception):
-    def __init__(self, msg):
-        self.msg = msg
+class BlockchainError(Exception):
+    pass
+
+class BlockchainGetBlockError(BlockchainError):
+    pass
+
+class BlockchainAddBlockError(BlockchainError):
+    pass
+
+class BlockError(Exception):
+    pass
+
+class BlockMineError(BlockError):
+    pass
+
+class BlockInitError(BlockError):
+    pass
+
+class BlockHashError(BlockError):
+    pass
+
+class BlockBuildFromJsonError(BlockError):
+    pass
 
 def get_cursor():
     return g.connectionToDb.cursor()
@@ -42,24 +62,26 @@ class Node:
         return self.blockchain.jsonify()
 
     def getBlock(self, hash):
-        block = self.blockchain.getBlock(hash)
-        if block is not None:
-            return block.jsonify()
-        return None
+        try:
+            block = self.blockchain.getBlock(hash)
+            if block is not None:
+                return block.jsonify()
+            return None
+        except Exception as e:
+            print('Node.getBlock():\n\tError for hash:', hash)
+            print('\n\tThe error was:', repr(e))
 
     def addBlock(self, block_json):
-        # TODO error handling, verify that block json is valid
-        print('Node.addBlock()')
-        block = self.blockchain.makeBlock(block_json)
-        if block is not None:
-            print('block is not none')
-            block.printBlock()
+        try:
+            block = self.blockchain.makeBlock(block_json)
             self.blockchain.addBlock(block)
+        except Exception as e:
+            print('Node.addBlock():\n\tError for JSON:', block_json)
+            print('\n\tThe error was:', repr(e))
 
     def getHostIps(self):
         hostIpList = []
         interfaces = netifaces.interfaces()
-
         for interface in interfaces:
             ifaddress = netifaces.ifaddresses(interface)
             if(netifaces.AF_INET in ifaddress):
@@ -123,20 +145,21 @@ class Node:
         url = 'http://'+peerIp+':5000/block/request'
         data = {'hash': hash}
         block_json = requests.post(url, json=data, timeout=5)
-        # TODO verify block
-        block = Block.buildFromJson(block_json)
-        if block is not None:
-            self.blockchain.addBlock(block)
+        try:
+            block = Block.buildFromJson(block_json)
+            if block is not None:
+                self.blockchain.addBlock(block)
+        except Exception as e:
+            print('Node.queryBlockFromPeer():\n\tError for peerIp:', peerIp, '\n\thash:', hash)
+            print('\n\tThe error was:', repr(e))
 
     def queryBlocksFromPeer(self, peerIp, topHashChain):
         for hash in topHashChain:
             # TODO query blocks in order
             self.queryBlockFromPeer(peerIp, hash)
 
-
 class Blockchain:
     def __init__(self):
-        #print('Blockchain.__init__')
         cursor = get_cursor()
         cursor.execute("DROP TABLE IF EXISTS blocks;")
         cursor.execute("CREATE TABLE blocks(hash text, block bytea);")
@@ -145,17 +168,10 @@ class Blockchain:
         cursor.execute("CREATE TABLE status(key text, value text);")
         g.connectionToDb.commit()
         genesisBlock = Block.generateGenesisBlock()
-        #print('Generated genesis block')
-        #genesisBlock.printBlock()
         cursor.execute("INSERT INTO blocks VALUES (%s, %s);", (genesisBlock.hash, pickle.dumps(genesisBlock)) )
         g.connectionToDb.commit()
         cursor.close()
-        self.topHash = genesisBlock.hash
         self.storeTopHash(genesisBlock.hash)
-        print('Comparing self.topHash and self.getTopHash()')
-        print(self.topHash == self.getTopHash())
-        print('self.topHash:', self.topHash)
-        print('self.getTopHash():', self.getTopHash())
         self.sumOfDifficuties = 0
 
     def storeTopHash(self, topHash):
@@ -189,8 +205,6 @@ class Blockchain:
         return Block.buildFromJson(block_json)
 
     def getBlock(self, hash):
-        #print('Blockchain.getBlock()')
-        #print('hash:', hash)
         try:
             cursor = get_cursor()
             cursor.execute( "SELECT block FROM blocks WHERE hash = %s;" , (hash, ) )
@@ -203,20 +217,21 @@ class Blockchain:
             cursor.close()
             return block
         except:
-            raise UserDefinedError('error in Blockchain.getBlock()' + hash)
+            raise BlockchainGetBlockError('Error in getBlock() for hash: ' + hash)
 
     def getPreviousBlock(self, block):
-        if(block.previousHash!='0'*64):
-            # TODO error handling
+        if(block.previousHash=='0'*64):
+            # block is genesisBlock
+            return None
+        else:
             return self.getBlock(block.previousHash)
 
     def getPreviousHash(self, hash):
         if(hash=='0'*64):
-            # TODO not to send '0'*64, stop at genesisHash
             return None
         else:
             block = self.getBlock(hash)
-            if(block==None):
+            if block is None:
                 return None
             return self.getBlock(hash).previousHash
 
@@ -225,52 +240,43 @@ class Blockchain:
         block = self.getBlock(hash)
         height = 0
         genesisPreviousHash = '0'*64
-        while(block.previousHash!=genesisPreviousHash):
-            block = self.getPreviousBlock(block)
-            height += 1
-        #print("Height:", height)
-        return height
+        previousBlock = self.getPreviousBlock(block)
+        if previousBlock is None:
+            # block is genesisBlock
+            return 0
+        else:
+            return previousBlock.height + 1
 
     def addBlock(self, block):
-        print("addBlock()")
-        #block.printBlock()
-        try:
-            if(block.verify()):
-                previousBlock = self.getPreviousBlock(block)
-                if(previousBlock is None):
-                    print("No previous block for block with previousHash:", block.previousHash)
-                else:
-                    #print('Got previous height:', (self.getPreviousBlock(block)).height)
-                    block.setHeight( previousBlock.height + 1 )
-                    #print('The height is set as', block.height)
-                    cursor = get_cursor()
-                    cursor.execute('INSERT INTO blocks VALUES (%s,%s);', (block.hash, pickle.dumps(block)))
-                    # TODO longest chain based on sumOfDifficuties
-                    newHeight = self.findHeight(block.hash)
-                    if(newHeight > self.getTopHeight()):
-                        self.topHash = block.hash
-                        self.storeTopHash(block.hash)
-                        print('Comparing self.topHash and self.getTopHash()')
-                        print(self.topHash == self.getTopHash())
-                        print('self.topHash:', self.topHash)
-                        print('self.getTopHash():', self.getTopHash())
-                    g.connectionToDb.commit()
-                    print('Added block with hash:', block.hash)
-                    print('Block height:', block.height)
-                    self.getBlock(block.hash).printBlock()
-                    #block.printBlock()
+        if isinstance(block, Block):
+            if block.verify():
+                try:
+                    previousBlock = self.getPreviousBlock(block)
+                    if previousBlock is None:
+                        print("Blockchain.addBlock():\n\tNo previous block for block with previousHash:", block.previousHash)
+                        return
+                    else:
+                        block.setHeight( previousBlock.height + 1 )
+                        cursor = get_cursor()
+                        cursor.execute('INSERT INTO blocks VALUES (%s,%s);', (block.hash, pickle.dumps(block)))
+                        # TODO longest chain based on sumOfDifficuties
+                        newHeight = block.height
+                        if(newHeight > self.getTopHeight()):
+                            self.storeTopHash(block.hash)
+                        g.connectionToDb.commit()
+                        print('Added block:')
+                        block.printBlock()
+                except:
+                        raise BlockchainAddBlockError('Error in addBlock() for block: ' + block.stringify())
             else:
-                print('Block not verified')
+                print('Blockchain.addBlock():\n\tblock not verified')
                 block.printBlock()
-        except:
-            raise UserDefinedError('error in Blockchain.addBlock()' + block.stringify())
+        else:
+            print('Blockchain.addBlock():\n\tnot isinstance(block, Block)')
 
     def buildTestBlockchain(self, numberOfBlocks):
-        print("buildTestBlockchain()")
         topBlock = self.getBlock(self.getTopHash())
-
         for iter in range(1,numberOfBlocks+1):
-            #print('iter:', iter, 'topHash:', self.topHash)
             nextBlock = Block({"Data": "Block number " + str(iter)}, topBlock.hash, difficulty=2, mine=True)
             self.addBlock(nextBlock)
             topBlock = nextBlock
@@ -304,15 +310,11 @@ class Blockchain:
         return topHashChain
 
     def jsonify(self):
-        #print('Blockchain.jsonify()')
         chain_to_send = []
         block = self.getBlock(self.getTopHash())
-        #print('block:')
-        #block.printBlock()
         chain_to_send.append(block.jsonify())
         genesisPreviousHash = '0'*64
         while(block.previousHash!=genesisPreviousHash):
-            # TODO error handling
             block = self.getBlock(block.previousHash)
             chain_to_send.append(block.jsonify())
         return chain_to_send
@@ -323,10 +325,15 @@ class Block:
         self.difficulty = difficulty
         self.nonce = 0
         self.previousHash = previousHash
-        self.hash = self.hashBlock()
         self.height = -1
-        if(mine):
-            self.mineBlock()
+        try:
+            self.hash = self.hashBlock()
+            if(mine):
+                self.mineBlock()
+        except BlockHashError:
+            raise BlockInitError('Error in __init__() due to BlockHashError')
+        except BlockMineError:
+            raise BlockInitError('Error in __init__() due to BlockMineError')
 
     def setHeight(self, height):
         self.height = height
@@ -337,12 +344,12 @@ class Block:
         return
 
     def hashBlock(self):
-        sha = hashlib.sha256()
         try:
+            sha = hashlib.sha256()
             sha.update((str(self.data) + str(self.previousHash) + str(self.nonce)).encode('utf-8'))
             return sha.hexdigest()
         except:
-            raise UserDefinedError('error in Block.hashBlock()' + self.stringify())
+            raise BlockHashError('Error in hashBlock()')
 
     def mineBlock(self):
         prefix = '0' * self.difficulty
@@ -351,58 +358,56 @@ class Block:
                 self.nonce += 1
                 self.hash = self.hashBlock()
             return
+        except BlockHashError:
+            raise BlockMineError('Error in mineBlock() due to BlockHashError')
         except:
-            raise UserDefinedError('error in Block.mineBlock()' + self.stringify())
+            raise BlockMineError('Error in mineBlock()')
 
     def jsonify(self):
-        try:
-            return self.__dict__
-        except:
-            raise UserDefinedError('error in Block.jsonify()')
+        return self.__dict__
 
     def stringify(self):
         return json.dumps(self.jsonify())
 
     def verify(self):
         prefix = '0' * self.difficulty
-        try:
-            return( (self.hash).startswith(prefix) )
-        except:
-            raise UserDefinedError('error in Block.verify()' + self.stringify())
+        return( (self.hash).startswith(prefix) )
 
     def printBlock(self):
-        try:
-            print("Block:\n\tData:\t\t", self.data)
-            print("\tPrevious Hash:\t", self.previousHash[:10])
-            print("\tNonce:\t\t", self.nonce)
-            print("\tDifficulty:\t", self.difficulty)
-            print("\tHash:\t\t", self.hash[:10])
-            try:
-                print("\tHeight:\t\t", self.height)
-            except:
-                pass
-            return
-        except:
-            raise UserDefinedError('error in Block.printBlock()' + self.stringify())
+        print("Block:\n\tData:\t\t", self.data)
+        print("\tPrevious Hash:\t", self.previousHash[:10])
+        print("\tNonce:\t\t", self.nonce)
+        print("\tDifficulty:\t", self.difficulty)
+        print("\tHash:\t\t", self.hash[:10])
+        print("\tHeight:\t\t", self.height)
 
     @staticmethod
     def generateGenesisBlock():
-        block = Block({"Data": "Genesis Block"}, '0'*64, mine=False)
-        block.difficulty = 0
-        block.setHeight(0)
-        block.mineBlock()
-        return block
-
-    @staticmethod
-    def buildFromJson(json_dict):
         try:
-            # TODO mine for difficulty in json_dict
-            if('mine' in json_dict and json_dict['mine']=='on'):
-                block = Block(json_dict['data'], json_dict['previousHash'], difficulty=int(json_dict['difficulty']), mine=True)
-            else:
-                block = Block(json_dict['data'], json_dict['previousHash'])
-                block.nonce = int(json_dict['nonce'])
+            block = Block({"Data": "Genesis Block"}, '0'*64, mine=False)
+            block.difficulty = 0
+            block.setHeight(0)
+            block.mineBlock()
             return block
         except:
-            print('Block.buildFromJson() returning None for:', json_dict)
-            return None
+            raise BlockError('Error in generateGenesisBlock()')
+
+    @staticmethod
+    def buildFromJson(block_json):
+        try:
+            if( 'data' in block_json and
+                'previousHash' in block_json and
+                len(block_json['previousHash'])==64 and
+                'difficulty' in block_json and
+                'nonce' in block_json):
+                if( 'mine' in block_json and
+                    block_json['mine']=='on'):
+                    block = Block(block_json['data'], block_json['previousHash'], difficulty=int(block_json['difficulty']), mine=True)
+                else:
+                    block = Block(block_json['data'], block_json['previousHash'])
+                    block.nonce = int(block_json['nonce'])
+                return block
+        except BlockInitError:
+            raise BlockBuildFromJsonError('Error in buildFromJson() due to BlockInitError')
+        except:
+            raise BlockBuildFromJsonError('Error in buildFromJson()')
