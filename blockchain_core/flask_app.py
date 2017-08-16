@@ -16,7 +16,7 @@ with app.app_context():
     #print('app.app_context()')
     connect_db()
     node = Node()
-    node.buildTestNode(15)
+    node.buildTestNode(26)
     g.connectionToDb.close()
 
 @app.before_request
@@ -78,14 +78,16 @@ def serve_peerList():
 
 @app.route('/block/sync', methods=['POST'])
 def serve_block_sync():
-    print('serve_block_sync')
+    print('serve_block_sync():')
     if request.json:
         print('request.json')
         if 'topHash' in request.json:
-            print('topHash')
+            #print('\trequest.json contains topHash')
+            #print("\trequest.json['tophash']:", request.json['topHash'])
             return jsonify(node.receiveSync(request.remote_addr, request.json['topHash']))
         elif 'topHashChain' in request.json:
-            print('topHashChain')
+            #print('\trequest.json contains topHashChain')
+            #print("\trequest.json['topHashChain']:", request.json['topHashChain'])
             return jsonify(node.receiveTopHashChain(request.remote_addr, request.json['topHashChain']))
     else:
         abort(400)
@@ -93,7 +95,11 @@ def serve_block_sync():
 @app.route('/block/sync/initiate', methods=['POST'])
 def serve_block_sync_initiate():
     if not request.json or not 'peerIp' in request.json:
+        print('serve_block_sync_initiate returning 400')
         abort(400)
+    #print('not 400')
+    #print(request.json)
+    #print(request.json['peerIp'])
     return jsonify(node.initiateSync(request.json['peerIp']))
 
 if __name__ == '__main__':
