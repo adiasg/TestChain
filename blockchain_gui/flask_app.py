@@ -59,9 +59,17 @@ def serve_peerList():
 def serve_initiateSync():
     if(request.method == 'GET'):
         peerList = requests.get(url+'/peerList', timeout=5).json()
+        print("peerList:", peerList)
         return render_template('initiateSync.html', peerList=peerList)
     else:
-        status = requests.post(url+'/block/sync/initiate', json=request.form, timeout=5).json()
+        print('form POSTed')
+        print(request.form)
+        print(request.form['peerIp'])
+        print('request.form:',jsonify(request.form))
+        data = {}
+        data['peerIp'] = request.form['peerIp']
+        print('data:', data)
+        status = requests.post(url+'/block/sync/initiate', json=data, timeout=5).json()
         return render_template('message.html', message=status)
 
 @app.route('/debug')
