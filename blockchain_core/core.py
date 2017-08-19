@@ -194,11 +194,7 @@ class Blockchain:
         g.connectionToDb.commit()
         cursor.close()
         self.storeTopHash(genesisBlock.hash)
-<<<<<<< Updated upstream
         self.maxSumOfDifficulty = 0
-=======
-        self.maxSumOfDifficuties = 0
->>>>>>> Stashed changes
 
     def storeTopHash(self, topHash):
         cursor = get_cursor()
@@ -222,11 +218,7 @@ class Blockchain:
         return topHash
 
     def getStatus(self):
-<<<<<<< Updated upstream
-        return {"Current Blockchain Height": self.getTopHeight(), "Max Sum Of Difficulties": self.maxSumOfDifficulty, "Tophash": self.getTopHash()}
-=======
         return {"Current Blockchain Height": self.getTopHeight(), "Max Sum Of Difficulties": self.getMaxSumOfDifficulty(), "Tophash": self.getTopHash()}
->>>>>>> Stashed changes
 
     def getTopHeight(self):
         return self.getBlock(self.getTopHash()).height
@@ -279,18 +271,6 @@ class Blockchain:
         else:
             return previousBlock.height + 1
 
-<<<<<<< Updated upstream
-
-    def findSumOfDifficulty(self,hash1):
-        print("findSumOfDifficulty()")
-        block = self.getBlock(hash1)
-        genesisPreviousHash = '0'*64
-        if(block.previousHash == genesisPreviousHash):
-            return len(block.hash)-len((block.hash).lstrip('0'))
-        else:
-            return (self.getPreviousBlock(block)).sumOfDifficulty+len(block.hash)-len((block.hash).lstrip('0'))
-
-=======
     def findSumOfDifficulty(self,hash):
         print("findSumOfDifficulty()")
         block = self.getBlock(hash)
@@ -308,40 +288,7 @@ class Blockchain:
     def setMaxSumOfDifficulty(self,newMaxSumOfDiff):
         self.maxSumOfDifficulty=newMaxSumOfDiff
 
->>>>>>> Stashed changes
     def addBlock(self, block):
-<<<<<<< HEAD
-        print("addBlock()")
-        #block.printBlock()
-        try:
-            if(block.verify()):
-                previousBlock = self.getPreviousBlock(block)
-                if(previousBlock is None):
-                    print("No previous block for block with previousHash:", block.previousHash)
-                else:
-                    #print('Got previous height:', (self.getPreviousBlock(block)).height)
-                    block.setHeight( previousBlock.height + 1 )
-                    block.setSumOfDifficulty(previousBlock.sumOfDifficulty + len(block.hash)-len((block.hash).lstrip('0')))
-                    #print('The height is set as', block.height)
-                    cursor = get_cursor()
-                    cursor.execute('INSERT INTO blocks VALUES (%s,%s);', (block.hash, pickle.dumps(block)))
-                    newHeight = self.findHeight(block.hash)
-                    newSumOfDifficulty=self.findSumOfDifficulty(block.hash)
-                    #if(newHeight > self.getTopHeight()):
-                    if(self.maxSumOfDifficulty < newSumOfDifficulty):
-                        self.maxSumOfDifficulty = newSumOfDifficulty
-                        self.topHash = block.hash
-                        self.storeTopHash(block.hash)
-                        print('Comparing self.topHash and self.getTopHash()')
-                        print(self.topHash == self.getTopHash())
-                        print('self.topHash:', self.topHash)
-                        print('self.getTopHash():', self.getTopHash())
-                    g.connectionToDb.commit()
-                    print('Added block with hash:', block.hash)
-                    print('Block height:', block.height)
-                    self.getBlock(block.hash).printBlock()
-                    #block.printBlock()
-=======
         print('addBlock()')
         if isinstance(block, Block):
             if block.verify():
@@ -368,11 +315,10 @@ class Blockchain:
                     g.connectionToDb.commit()
                     print('Added block:')
                     block.printBlock()
->>>>>>> 9f50fd263066829b8b4f2dd12380e1832e544406
             else:
                 print('Block not verified')
                 block.printBlock()
-        except:
+        else:
             raise UserDefinedError('error in Blockchain.addBlock()' + block.stringify())
 
     def buildTestBlockchain(self, numberOfBlocks):
@@ -427,11 +373,7 @@ class Block:
         self.nonce = nonce
         self.previousHash = previousHash
         self.height = -1
-<<<<<<< Updated upstream
         self.sumOfDifficulty = 0
-=======
-        self.sumOfDifficulty=0
->>>>>>> Stashed changes
         try:
             self.hash = self.hashBlock()
             if(mine):
@@ -484,10 +426,10 @@ class Block:
         print("\tHash:\t\t", self.hash[:10])
         print("\tHeight:\t\t", self.height)
         print("\tSumOfDifficulty:", self.sumOfDifficulty)
+        
 
     @staticmethod
     def generateGenesisBlock():
-<<<<<<< HEAD
         try:
             block = Block({"Data": "Genesis Block"}, '0'*64, mine=False)
             block.difficulty = 0
@@ -497,14 +439,6 @@ class Block:
             return block
         except:
             raise BlockError('Error in generateGenesisBlock()')
-=======
-        block = Block({"Data": "Genesis Block"}, '0'*64, mine=False)
-        block.difficulty = 0
-        block.setHeight(0)
-        block.mineBlock()
-        block.setSumOfDifficulty(0)
-        return block
->>>>>>> 9f50fd263066829b8b4f2dd12380e1832e544406
 
     @staticmethod
     def buildFromJson(block_json):
