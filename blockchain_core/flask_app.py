@@ -16,7 +16,7 @@ with app.app_context():
     #print('app.app_context()')
     connect_db()
     node = Node()
-    node.buildTestNode(26)
+    node.buildTestNode(20)
     g.connectionToDb.close()
 
 @app.before_request
@@ -62,14 +62,14 @@ def serve_block_submit():
 def serve_connect():
     if not request.json or not 'nodeDeclaration' in request.json:
         abort(400)
-    node.connectPeer(request.remote_addr, request.json['nodeDeclaration'])
+    node.addPeer(request.remote_addr, request.json['nodeDeclaration'])
     return redirect(url_for('serve_index'))
 
 @app.route('/connect/to', methods=['POST'])
 def serve_connect_to():
     if not request.json or not 'peerIp' in request.json:
         abort(400)
-    node.addPeer(request.json['peerIp'])
+    node.connectPeer(request.json['peerIp'])
     return jsonify({'status': 'recieved request'})
 
 @app.route('/peerList', methods=['GET'])
