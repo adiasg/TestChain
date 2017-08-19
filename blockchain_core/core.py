@@ -84,15 +84,18 @@ class Node:
                 hostIpList.append(link['addr'])
         return hostIpList
 
-    def addPeer(self, peerIp):
+    def connectPeer(self, peerIp):
         if(peerIp not in self.peerList):
             hostIpList = self.getHostIps()
             if(peerIp not in hostIpList):
-                self.peerList.append(peerIp)
+                url = 'http://'+peerIp+':5000/'
+                peerDeclaration = requests.get(url,timeout = 5).json()
+                self.addPeer(peerIp, peerDeclaration)
+                #self.peerList.append(peerIp)
 
-    def connectPeer(self, peerIp, peerDeclaration):
+    def addPeer(self, peerIp, peerDeclaration):
         if('isPeer' in peerDeclaration and peerDeclaration['isPeer'] is True):
-            self.addPeer(peerIp)
+            self.peerList.append(peerIp)
 
     def sendTopHashChain(self, peerIp, topHashChain):
         print('sendTopHashChain()')
@@ -191,7 +194,7 @@ class Blockchain:
         g.connectionToDb.commit()
         cursor.close()
         self.storeTopHash(genesisBlock.hash)
-        self.sumOfDifficuties = 0
+        self.maxSumOfDifficulty = 0
 
     def storeTopHash(self, topHash):
         cursor = get_cursor()
@@ -215,7 +218,7 @@ class Blockchain:
         return topHash
 
     def getStatus(self):
-        return {"Current Blockchain Height": self.getTopHeight(), "Sum Of Difficulties": self.sumOfDifficuties, "Tophash": self.getTopHash()}
+        return {"Current Blockchain Height": self.getTopHeight(), "Max Sum Of Difficulties": self.getMaxSumOfDifficulty(), "Tophash": self.getTopHash()}
 
     def getTopHeight(self):
         return self.getBlock(self.getTopHash()).height
@@ -268,6 +271,23 @@ class Blockchain:
         else:
             return previousBlock.height + 1
 
+    def findSumOfDifficulty(self,hash):
+        print("findSumOfDifficulty()")
+        block = self.getBlock(hash)
+        genesisPreviousHash = '0'*64
+
+        if(block.previousHash == genesisPreviousHash):
+            return 0#len(block.hash)-len((block.hash).lstrip('0'))
+        else:
+            return (self.getPreviousBlock(block)).sumOfDifficulty+len(block.hash)-len((block.hash).lstrip('0'))
+
+    def getMaxSumOfDifficulty(self):
+        topHash=self.getTopHash()
+        return self.findSumOfDifficulty(topHash)
+
+    def setMaxSumOfDifficulty(self,newMaxSumOfDiff):
+        self.maxSumOfDifficulty=newMaxSumOfDiff
+
     def addBlock(self, block):
         print('addBlock()')
         if isinstance(block, Block):
@@ -283,20 +303,23 @@ class Blockchain:
                 else:
                     print("\tPrevious block found")
                     block.setHeight( previousBlock.height + 1 )
+                    block.setSumOfDifficulty(previousBlock.sumOfDifficulty + len(block.hash)-len((block.hash).lstrip('0')))
                     cursor = get_cursor()
                     cursor.execute('INSERT INTO blocks VALUES (%s,%s);', (block.hash, pickle.dumps(block)))
-                    # TODO longest chain based on sumOfDifficuties
+                    newSumOfDifficulty=self.findSumOfDifficulty(block.hash)
                     newHeight = block.height
-                    if(newHeight > self.getTopHeight()):
+                    if(self.getMaxSumOfDifficulty() < newSumOfDifficulty):
+                        #self.maxSumOfDifficulty = newSumOfDifficulty
                         self.storeTopHash(block.hash)
+                        self.setMaxSumOfDifficulty(newSumOfDifficulty)
                     g.connectionToDb.commit()
                     print('Added block:')
                     block.printBlock()
             else:
-                print('Blockchain.addBlock():\n\tblock not verified')
+                print('Block not verified')
                 block.printBlock()
         else:
-            print('Blockchain.addBlock():\n\tnot isinstance(block, Block)')
+            raise UserDefinedError('error in Blockchain.addBlock()' + block.stringify())
 
     def buildTestBlockchain(self, numberOfBlocks):
         topBlock = self.getBlock(self.getTopHash())
@@ -350,6 +373,7 @@ class Block:
         self.nonce = nonce
         self.previousHash = previousHash
         self.height = -1
+        self.sumOfDifficulty = 0
         try:
             self.hash = self.hashBlock()
             if(mine):
@@ -365,6 +389,10 @@ class Block:
 
     def setDifficulty(self, difficulty):
         self.difficulty = difficulty
+        return
+
+    def setSumOfDifficulty(self, sumOfDifficulty):
+        self.sumOfDifficulty = sumOfDifficulty
         return
 
     def hashBlock(self):
@@ -397,14 +425,20 @@ class Block:
         print("\tDifficulty:\t", self.difficulty)
         print("\tHash:\t\t", self.hash[:10])
         print("\tHeight:\t\t", self.height)
+        print("\tSumOfDifficulty:", self.sumOfDifficulty)
+        
 
     @staticmethod
     def generateGenesisBlock():
-        block = Block({"Data": "Genesis Block"}, '0'*64, mine=False)
-        block.difficulty = 0
-        block.setHeight(0)
-        block.mineBlock()
-        return block
+        try:
+            block = Block({"Data": "Genesis Block"}, '0'*64, mine=False)
+            block.difficulty = 0
+            block.setHeight(0)
+            block.mineBlock()
+            block.setSumOfDifficulty(0)
+            return block
+        except:
+            raise BlockError('Error in generateGenesisBlock()')
 
     @staticmethod
     def buildFromJson(block_json):
