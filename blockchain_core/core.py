@@ -3,42 +3,30 @@ import hashlib
 import json
 import pickle
 import psycopg2
-import netifaces
+#import netifaces
 import requests
-from threading import Thread
-
-class BlockchainError(Exception):
-    pass
-
-class BlockchainGetBlockError(BlockchainError):
-    pass
-
-class BlockchainAddBlockError(BlockchainError):
-    pass
-
-class BlockError(Exception):
-    pass
-
-class BlockMineError(BlockError):
-    pass
-
-class BlockInitError(BlockError):
-    pass
-
-class BlockHashError(BlockError):
-    pass
-
-class BlockBuildFromJsonError(BlockError):
-    pass
+#from threading import Thread
 
 def get_cursor():
     return g.connectionToDb.cursor()
+    '''
+    try:
+        return g.connectionToDb.cursor()
+    except RuntimeError:
+        try:
+            connect_str = " dbname='myproject' user='myprojectuser' password='password' host='postgres' port='5432' "
+            connectionToDb = psycopg2.connect(connect_str)
+        except psycopg2.OperationalError:
+            connect_str = " dbname='myproject' user='myprojectuser' host='localhost' password='password' "
+            connectionToDb = psycopg2.connect(connect_str)
+        return connectionToDb.cursor()
+    '''
 
 class Node:
     def __init__(self):
         self.nodeDeclaration = {'isPeer': True}
         self.blockchain = Blockchain()
-        self.peerList = ['192.168.56.101']
+        self.peerList = ['172.19.0.2']
 
     def getNodeDeclaration(self):
         return self.nodeDeclaration
@@ -70,9 +58,10 @@ class Node:
     def addBlock(self, block_json):
         block = self.blockchain.makeBlock(block_json)
         self.blockchain.addBlock(block)
+        return block.jsonify()
 
     def getHostIps(self):
-        hostIpList = []
+        '''hostIpList = []
         interfaces = netifaces.interfaces()
         for interface in interfaces:
             ifaddress = netifaces.ifaddresses(interface)
@@ -82,102 +71,93 @@ class Node:
             if(netifaces.AF_INET6 in ifaddress):
                 link = netifaces.ifaddresses(interface)[netifaces.AF_INET6][0]
                 hostIpList.append(link['addr'])
-        return hostIpList
+        return hostIpList'''
+        return ['localhost', '127.0.0.1']
 
     def connectPeer(self, peerIp):
         if(peerIp not in self.peerList):
             hostIpList = self.getHostIps()
             if(peerIp not in hostIpList):
                 url = 'http://'+peerIp+':5000/'
-                peerDeclaration = requests.get(url,timeout = 5).json()
-                self.addPeer(peerIp, peerDeclaration)
-                #self.peerList.append(peerIp)
+                peerDeclaration = requests.get(url,timeout=30).json()
+                self.addPeer(peerIp, peerDeclaration['nodeDeclaration'])
 
     def addPeer(self, peerIp, peerDeclaration):
         if('isPeer' in peerDeclaration and peerDeclaration['isPeer'] is True):
             self.peerList.append(peerIp)
 
     def sendTopHashChain(self, peerIp, topHashChain):
-        print('sendTopHashChain()')
-        print('sending topHashChain:', topHashChain)
         url = 'http://'+peerIp+':5000/block/sync'
         data = {'topHashChain': topHashChain}
-        requests.post(url, json=data, timeout=5)
+        requests.post(url, json=data, timeout=30)
 
     def receiveSync(self, peerIp, peerTopHash):
         print('receiveSync()')
         print('\tpeerTopHash:', peerTopHash)
         if self.blockchain.getBlock(peerTopHash) is None:
-            print('\tself.blockchain.getBlock(peerTopHash) is None')
             print('\treturning:', {'status': 'lagging', 'topHash': self.blockchain.getTopHash()})
             return {'status': 'lagging', 'topHash': self.blockchain.getTopHash()}
         else:
-            print('\tself.blockchain.getBlock(peerTopHash) is not None')
             print('\treturning:', {'status': 'leading', 'topHashChain': self.blockchain.getTopChainHash(peerTopHash)})
             return {'status': 'leading', 'topHashChain': self.blockchain.getTopChainHash(peerTopHash)}
 
     def initiateSync(self, peerIp):
-        print('Node.initiateSync()')
+        print('initiateSync()')
         if peerIp not in self.getHostIps():
-            print('\tpeerIp not in self.getHostIps()')
             url = 'http://'+peerIp+':5000/block/sync'
             data = {'topHash': self.blockchain.getTopHash()}
             # TODO this throws exception on timeout
-            print('\tget status_response')
-            status_response = requests.post(url, json=data, timeout=5).json()
+            status_response = requests.post(url, json=data, timeout=30).json()
             print('\tgot status_response:', status_response)
             if status_response is not None and 'status' in status_response:
-                print("\tstatus_response is not None and 'status' in status_response")
                 if status_response['status']=='lagging' and 'topHash' in status_response:
-                    print("\tstatus_response['status'] is 'lagging' and 'topHash' in status_response")
-                    # async call sendTopChainHash(peerIp, status_response['topHash'])
-                    # TODO try without spawning a thread
-                    '''sendTopHashChainThread = Thread(target=self.sendTopHashChain, args=(peerIp, self.blockchain.getTopChainHash(status_response['topHash']),))
-                    sendTopHashChainThread.setName('Thread-sendTopHashChainThread')
-                    sendTopHashChainThread.start()'''
-                    self.sendTopHashChain(peerIp, self.blockchain.getTopChainHash(status_response['topHash']))
+                    if self.blockchain.getBlock(status_response['topHash']) is None:
+                        # TODO - verify forked?
+                        print('\tForked')
+                        self.sendTopHashChain(peerIp, self.blockchain.getTopChainNumber(10))
+                        #sendTopChainNumberThread = Thread(target=self.sendTopHashChain, args=(peerIp, self.blockchain.getTopChainNumber(20)) )
+                        #sendTopChainNumberThread.start()
+                    else:
+                        print('\tLagging')
+                        self.sendTopHashChain(peerIp, self.blockchain.getTopChainHash(status_response['topHash']))
+                        #sendTopHashChainThread = Thread(target=self.sendTopHashChain, args=(peerIp, self.blockchain.getTopChainHash(status_response['topHash'])) )
+                        #sendTopHashChainThread.start()
                     return {'status': 'Sent topHashChain', 'peerStatus': status_response['status']}
                 elif status_response['status']=='leading' and 'topHashChain' in status_response:
-                    # async call queryBlocksFromPeer(peerIp, status_response['topHashChain'])
-                    print("\tstatus_response['status'] is 'leading' and topHashChain in status_response")
-                    '''getTopHashChainThread = Thread(target=self.queryBlocksFromPeer, args=(peerIp, status_response['topHashChain'],))
-                    getTopHashChainThread.setName('Thread-getTopHashChainThread')
-                    getTopHashChainThread.start()'''
+                    print('\tLeading')
                     self.queryBlocksFromPeer(peerIp, status_response['topHashChain'])
+                    #queryBlocksFromPeerThread = Thread(target=self.queryBlocksFromPeer, args=(peerIp, status_response['topHashChain']) )
+                    #queryBlocksFromPeerThread.start()
                     return {'status': 'received topHashChain', 'peerStatus': status_response['status']}
         return {'error': 'Node.initiateSync()'}
 
     def receiveTopHashChain(self, peerIp, topHashChain):
-        # async call queryBlocksFromPeer(peerIp, status_response['topHashChain'])
-        '''receiveTopHashChain = Thread(target=self.queryBlocksFromPeer, args=(peerIp, topHashChain,))
-        receiveTopHashChainThread.setName('Thread-receiveTopHashChainThread')
-        receiveTopHashChainThread.start()'''
+        print('receiveTopHashChain()')
+        print('Chain:')
+        print(topHashChain)
         self.queryBlocksFromPeer(peerIp, topHashChain)
+        #queryBlocksFromPeerThread = Thread(target=self.queryBlocksFromPeer, args=(peerIp, topHashChain) )
+        #queryBlocksFromPeerThread.start()
         return {'status': 'received topChainHash'}
 
     def queryBlocksFromPeer(self, peerIp, topHashChain):
         print('queryBlocksFromPeer()')
-        print('\tquerying:', topHashChain)
         key=max(topHashChain, key=int)
         key = int(key)
         while(key>=0):
             self.queryBlockFromPeer(peerIp, topHashChain[str(key)])
             key = key-1
-        '''for key in topHashChain:
-            # TODO query blocks in order
-            self.queryBlockFromPeer(peerIp, topHashChain[key])'''
 
     def queryBlockFromPeer(self, peerIp, hash):
+        print('queryBlockFromPeer()')
         url = 'http://'+peerIp+':5000/block/request'
         data = {'hash': hash}
-        print('\trequesting block with hash:', hash)
-        block_json = requests.post(url, json=data, timeout=5).json()
-        print('\tblock_json:', block_json)
+        print(data)
+        block_json = requests.post(url, json=data, timeout=30).json()
         block = Block.buildFromJson(block_json)
         if block is not None:
-            print('\tbuilt block:')
-            block.printBlock()
-            print('\tadding block')
+            #block.printBlock()
+            print('Trying add block')
             self.blockchain.addBlock(block)
 
 class Blockchain:
@@ -239,15 +219,12 @@ class Blockchain:
         return block
 
     def getPreviousBlock(self, block):
-        print('getPreviousBlock()')
+        #print('getPreviousBlock()')
         if(block.previousHash=='0'*64):
             # block is genesisBlock
-            print('\tBlock is genesisBlock')
-            print('\tReturning None')
             return None
         else:
-            print('\tReturning block:')
-            self.getBlock(block.previousHash).printBlock()
+            #self.getBlock(block.previousHash).printBlock()
             return self.getBlock(block.previousHash)
 
     def getPreviousHash(self, hash):
@@ -260,7 +237,6 @@ class Blockchain:
             return self.getBlock(hash).previousHash
 
     def findHeight(self, hash):
-        print("findHeight()")
         block = self.getBlock(hash)
         height = 0
         genesisPreviousHash = '0'*64
@@ -272,12 +248,10 @@ class Blockchain:
             return previousBlock.height + 1
 
     def findSumOfDifficulty(self,hash):
-        print("findSumOfDifficulty()")
         block = self.getBlock(hash)
         genesisPreviousHash = '0'*64
-
         if(block.previousHash == genesisPreviousHash):
-            return 0#len(block.hash)-len((block.hash).lstrip('0'))
+            return 0
         else:
             return (self.getPreviousBlock(block)).sumOfDifficulty+len(block.hash)-len((block.hash).lstrip('0'))
 
@@ -289,19 +263,13 @@ class Blockchain:
         self.maxSumOfDifficulty=newMaxSumOfDiff
 
     def addBlock(self, block):
-        print('addBlock()')
         if isinstance(block, Block):
             if block.verify():
-                print('\tblock verified')
-                print('\tblock hash:', block.hash)
-                print('\tblock difficulty:', block.difficulty)
-                print('\tTrying to get previous block with hash:', block.previousHash)
                 previousBlock = self.getPreviousBlock(block)
                 if previousBlock is None:
                     print("\tBlockchain.addBlock():\n\tNo previous block for block with previousHash:", block.previousHash)
                     return
                 else:
-                    print("\tPrevious block found")
                     block.setHeight( previousBlock.height + 1 )
                     block.setSumOfDifficulty(previousBlock.sumOfDifficulty + len(block.hash)-len((block.hash).lstrip('0')))
                     cursor = get_cursor()
@@ -309,7 +277,6 @@ class Blockchain:
                     newSumOfDifficulty=self.findSumOfDifficulty(block.hash)
                     newHeight = block.height
                     if(self.getMaxSumOfDifficulty() < newSumOfDifficulty):
-                        #self.maxSumOfDifficulty = newSumOfDifficulty
                         self.storeTopHash(block.hash)
                         self.setMaxSumOfDifficulty(newSumOfDifficulty)
                     g.connectionToDb.commit()
@@ -318,8 +285,6 @@ class Blockchain:
             else:
                 print('Block not verified')
                 block.printBlock()
-        else:
-            raise UserDefinedError('error in Blockchain.addBlock()' + block.stringify())
 
     def buildTestBlockchain(self, numberOfBlocks):
         topBlock = self.getBlock(self.getTopHash())
@@ -347,9 +312,7 @@ class Blockchain:
         topHashChain = {0: topHash}
         count = 0
         while(block.hash!=last_hash_in_chain):
-            #print('from getthc')
             count += 1
-            #block.printBlock()
             if block.previousHash=='0'*64:
                 break
             block = self.getPreviousBlock(block)
@@ -374,14 +337,9 @@ class Block:
         self.previousHash = previousHash
         self.height = -1
         self.sumOfDifficulty = 0
-        try:
-            self.hash = self.hashBlock()
-            if(mine):
-                self.mineBlock()
-        except BlockHashError:
-            raise BlockInitError('Error in __init__() due to BlockHashError')
-        except BlockMineError:
-            raise BlockInitError('Error in __init__() due to BlockMineError')
+        self.hash = self.hashBlock()
+        if(mine):
+            self.mineBlock()
 
     def setHeight(self, height):
         self.height = height
@@ -426,23 +384,19 @@ class Block:
         print("\tHash:\t\t", self.hash[:10])
         print("\tHeight:\t\t", self.height)
         print("\tSumOfDifficulty:", self.sumOfDifficulty)
-        
+
 
     @staticmethod
     def generateGenesisBlock():
-        try:
-            block = Block({"Data": "Genesis Block"}, '0'*64, mine=False)
-            block.difficulty = 0
-            block.setHeight(0)
-            block.mineBlock()
-            block.setSumOfDifficulty(0)
-            return block
-        except:
-            raise BlockError('Error in generateGenesisBlock()')
+        block = Block({"Data": "Genesis Block"}, '0'*64, mine=False)
+        block.difficulty = 0
+        block.setHeight(0)
+        block.mineBlock()
+        block.setSumOfDifficulty(0)
+        return block
 
     @staticmethod
     def buildFromJson(block_json):
-        print('buildFromJson()')
         if( 'data' in block_json and
             'previousHash' in block_json and
             len(block_json['previousHash'])==64 and
@@ -450,9 +404,7 @@ class Block:
             'nonce' in block_json):
             if( 'mine' in block_json and
                 block_json['mine']=='on'):
-                print('\tMining block')
                 block = Block(block_json['data'], block_json['previousHash'], difficulty=int(block_json['difficulty']), mine=True)
             else:
-                print('Not mining block')
                 block = Block(block_json['data'], block_json['previousHash'], difficulty=int(block_json['difficulty']), nonce=int(block_json['nonce']))
             return block

@@ -9,24 +9,31 @@ app = Flask(__name__)
 def connect_db():
     print('connect_db()')
     if not hasattr(g, 'connectionToDb'):
-        connect_str = " dbname='myproject' user='myprojectuser' host='localhost' password='password' "
-        g.connectionToDb = psycopg2.connect(connect_str)
+        '''
+        if(len(sys.argv)>1 and sys.argv[1]=='docker'):
+            connect_str = " dbname='myproject' user='myprojectuser' password='password' host='postgres' port='5432' "
+        else:
+            connect_str = " dbname='myproject' user='myprojectuser' host='localhost' password='password' "
+        '''
+        try:
+            connect_str = " dbname='myproject' user='myprojectuser' password='password' host='postgres' port='5432' "
+            g.connectionToDb = psycopg2.connect(connect_str)
+        except psycopg2.OperationalError:
+            connect_str = " dbname='myproject' user='myprojectuser' host='localhost' password='password' "
+            g.connectionToDb = psycopg2.connect(connect_str)
 
 with app.app_context():
-    #print('app.app_context()')
     connect_db()
     node = Node()
-    node.buildTestNode(20)
+    node.buildTestNode(4)
     g.connectionToDb.close()
 
 @app.before_request
 def beforeRequest():
-    #print('@app.before_request')
     connect_db()
 
 @app.teardown_appcontext
 def teardownAppcontext(error):
-    #print('@app.teardown_appcontext')
     if hasattr(g, 'connectionToDb'):
         g.connectionToDb.close()
 
@@ -54,9 +61,8 @@ def serve_block():
 
 @app.route('/block/submit', methods=['POST'])
 def serve_block_submit():
-    # TODO verify json
-    node.addBlock(request.json)
-    return jsonify({'block':'received'})
+    block_json = node.addBlock(request.json)
+    return jsonify({'block': block_json})
 
 @app.route('/connect', methods=['POST'])
 def serve_connect():
@@ -80,14 +86,11 @@ def serve_peerList():
 def serve_block_sync():
     print('serve_block_sync():')
     if request.json:
-        print('request.json')
         if 'topHash' in request.json:
-            #print('\trequest.json contains topHash')
-            #print("\trequest.json['tophash']:", request.json['topHash'])
+            print('\ttopHash')
             return jsonify(node.receiveSync(request.remote_addr, request.json['topHash']))
         elif 'topHashChain' in request.json:
-            #print('\trequest.json contains topHashChain')
-            #print("\trequest.json['topHashChain']:", request.json['topHashChain'])
+            print('\ttopHashChain')
             return jsonify(node.receiveTopHashChain(request.remote_addr, request.json['topHashChain']))
     else:
         abort(400)
@@ -95,15 +98,11 @@ def serve_block_sync():
 @app.route('/block/sync/initiate', methods=['POST'])
 def serve_block_sync_initiate():
     if not request.json or not 'peerIp' in request.json:
-        print('serve_block_sync_initiate returning 400')
         abort(400)
-    #print('not 400')
-    #print(request.json)
-    #print(request.json['peerIp'])
     return jsonify(node.initiateSync(request.json['peerIp']))
 
 if __name__ == '__main__':
     if(len(sys.argv)>1 and sys.argv[1]=='debug'):
-        app.run(debug=True)
+        app.run(debug=True, port=5000)
     else:
-        app.run(host='0.0.0.0', debug=False)
+        app.run(host='0.0.0.0', debug=False, port=5000, threaded=True)

@@ -3,16 +3,16 @@ version: '2'
 services:
     web:
         restart: always
-        build: ./web
+        build: ./blockchain_core
         ports:
-            - "8000:8000"
+            - "5010:5000"
         command: python flask_app.py
         depends_on:
             - postgres
 
     postgres:
         restart: always
-        build: ./db
+        build: ./postgres
         volumes_from:
             - data
         ports:
