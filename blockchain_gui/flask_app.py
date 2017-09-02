@@ -13,12 +13,12 @@ def serve_index():
 
 @app.route('/status')
 def serve_status():
-    data = requests.get(url+'/status', timeout=5).json()
+    data = requests.get(url+'/status', timeout=30).json()
     return render_template('status.html', status_data=data)
 
 @app.route('/block/all')
 def serve_block_all():
-    data = requests.get(url+'/block/all', timeout=5).json()
+    data = requests.get(url+'/block/all', timeout=30).json()
     return render_template('block_display.html', blockchain=data, block_display_order=['data', 'difficulty', 'nonce', 'previousHash', 'hash', 'height'])
 
 @app.route('/block/request', methods=['GET', 'POST'])
@@ -26,12 +26,12 @@ def serve_block_request():
     if(request.method == 'GET'):
         return render_template('block_request.html')
     else:
-        block = requests.post(url+'/block/request', json=request.form, timeout=5).json()
+        block = requests.post(url+'/block/request', json=request.form, timeout=30).json()
         return render_template('message.html', message=block)
 
 @app.route('/block/topHashChain')
 def serve_block_topHashChain():
-    data = requests.get(url+'/block/topHashChain', timeout=5).json()
+    data = requests.get(url+'/block/topHashChain', timeout=30).json()
     return render_template('message.html', message=data)
 
 @app.route('/block/submit', methods=['GET', 'POST'])
@@ -39,7 +39,7 @@ def serve_block_submit():
     if(request.method == 'GET'):
         return render_template('block_submit.html')
     else:
-        status = requests.post(url+'/block/submit', json=request.form, timeout=5).json()
+        status = requests.post(url+'/block/submit', json=request.form, timeout=30).json()
         return render_template('message.html', message=status)
 
 @app.route('/connect', methods=['GET', 'POST'])
@@ -47,18 +47,18 @@ def serve_connect():
     if(request.method == 'GET'):
         return render_template('connect.html')
     else:
-        status = requests.post(url+'/connect/to', json=request.form, timeout=5).json()
+        status = requests.post(url+'/connect/to', json=request.form, timeout=30).json()
         return render_template('message.html', message=status)
 
 @app.route('/peerList')
 def serve_peerList():
-    data = requests.get(url+'/peerList', timeout=5).json()
+    data = requests.get(url+'/peerList', timeout=30).json()
     return render_template('peerList.html', peerList=data)
 
 @app.route('/initiateSync', methods=['GET', 'POST'])
 def serve_initiateSync():
     if(request.method == 'GET'):
-        peerList = requests.get(url+'/peerList', timeout=5).json()
+        peerList = requests.get(url+'/peerList', timeout=30).json()
         print("peerList:", peerList)
         return render_template('initiateSync.html', peerList=peerList)
     else:
@@ -69,7 +69,7 @@ def serve_initiateSync():
         data = {}
         data['peerIp'] = request.form['peerIp']
         print('data:', data)
-        status = requests.post(url+'/block/sync/initiate', json=data, timeout=5).json()
+        status = requests.post(url+'/block/sync/initiate', json=data, timeout=30).json()
         return render_template('message.html', message=status)
 
 @app.route('/debug')
