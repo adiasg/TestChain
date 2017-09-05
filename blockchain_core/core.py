@@ -43,6 +43,18 @@ class Node:
     def buildTestNode(self, numberOfBlocks):
         self.blockchain.buildTestBlockchain(numberOfBlocks)
 
+    def nodeGenerateBlocks(self, numberOfBlocks):
+        self.blockchain.generateBlocks(numberOfBlocks)
+        return {'status': 'generated '+str(numberOfBlocks)+' blocks'}
+
+    def nodeGenerateBlocksWithPrefix(self, numberOfBlocks,prefix):
+        self.blockchain.generateBlocksWithPrefix(numberOfBlocks,prefix)
+        return {'status': 'generated '+str(numberOfBlocks)+' blocks with prefix : ' + prefix}
+
+    def nodeInduceFork(self,number_of_blocks_to_generate,hash,prefix):
+        self.blockchain.inducefork(number_of_blocks_to_generate,hash,prefix)
+        return {'status': 'generated '+str(number_of_blocks_to_generate)+' blocks with prefix : ' + prefix +'   Starting from hash : '+ hash}
+
     def getTopChainNumber(self, number_of_hashes_to_send):
         return self.blockchain.getTopChainNumber(number_of_hashes_to_send)
 
@@ -59,6 +71,13 @@ class Node:
         block = self.blockchain.makeBlock(block_json)
         self.blockchain.addBlock(block)
         return block.jsonify()
+    '''
+    def blockprop(self,block):
+        for peerIp in self.peerList:
+            url = 'http://'+ peerIp + ':5000'+'/block/incomingBlocks'
+            requests.post(url,json=block,timeout=30).json()
+    '''        
+
 
     def getHostIps(self):
         '''hostIpList = []
@@ -292,6 +311,34 @@ class Blockchain:
             nextBlock = Block({"Data": "Block number " + str(iter)}, topBlock.hash, difficulty=2, mine=True)
             self.addBlock(nextBlock)
             topBlock = nextBlock
+
+    def generateBlocks(self, numberOfBlocks):
+        topBlock = self.getBlock(self.getTopHash())
+        topBlocktemp = self.getBlock(self.getTopHash())
+        for iter in range(1,numberOfBlocks+1):
+            nextBlock = Block({"Data": "Block number " + str(iter+topBlock.height)}, topBlocktemp.hash, difficulty=2, mine=True)
+            self.addBlock(nextBlock)
+            topBlocktemp = nextBlock
+
+    def generateBlocksWithPrefix(self, numberOfBlocks,prefix):
+        topBlock = self.getBlock(self.getTopHash())
+        topBlocktemp = self.getBlock(self.getTopHash())
+        for iter in range(1,numberOfBlocks+1):
+            nextBlock = Block({prefix +" : " + "Data": "Block number " + str(iter+topBlock.height)}, topBlocktemp.hash, difficulty=2, mine=True)
+            self.addBlock(nextBlock)
+            topBlocktemp = nextBlock
+
+#def __init__(self, data, previousHash, difficulty=1, nonce=0, mine=False):
+    def inducefork(self,numberOfBlocks,hash,prefix):
+        block = self.getBlock(hash)
+        if block is None:
+            print ('hash not found in inducefork() method')
+            return
+        blocktemp = self.getBlock(hash)
+        for iter in range(1,numberOfBlocks+1):
+            nextBlock = Block({prefix + " : " + "Data": "Block number " + str(iter+block.height)}, blocktemp.hash, difficulty=2, mine=True)
+            self.addBlock(nextBlock)
+            blocktemp = nextBlock
 
     def getTopChainNumber(self, number_of_hashes_to_send):
         # TODO handle no such block in db

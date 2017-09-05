@@ -25,7 +25,7 @@ def connect_db():
 with app.app_context():
     connect_db()
     node = Node()
-    node.buildTestNode(4)
+    node.buildTestNode(15)
     g.connectionToDb.close()
 
 @app.before_request
@@ -59,11 +59,40 @@ def serve_block():
         abort(400)
     return jsonify(node.getBlock(request.json['hash']))
 
+
+@app.route('/block/generateBlocks', methods=['POST'])
+def serve_generateBlocks():
+    if not request.json or not 'number_of_blocks_to_generate' in request.json:
+        abort(400)
+    '''
+    if not 'prefix' in request.json or not 'hash' in request.json:
+        return jsonify(node.nodeGenerateBlocks(int(request.json['number_of_blocks_to_generate'])))
+    else:
+        #inducefork(self,numberOfBlocks,hash,prefix):
+        node.blockchain.inducefork(int(request.json['number_of_blocks_to_generate']),request.json['hash'],request.json['prefix'])
+        return jsonify({'status': 'recieved request'})
+    '''
+    if request.json['prefix']=="":
+        return jsonify(node.nodeGenerateBlocks(int(request.json['number_of_blocks_to_generate'])))
+    else:
+        if request.json['hash']=="":
+            return jsonify(node.nodeGenerateBlocksWithPrefix(int(request.json['number_of_blocks_to_generate']),request.json['prefix']))
+        else:
+            return jsonify(node.nodeInduceFork(int(request.json['number_of_blocks_to_generate']),request.json['hash'],request.json['prefix']))
+            #return jsonify({'status': 'recieved request'})
+
 @app.route('/block/submit', methods=['POST'])
 def serve_block_submit():
     block_json = node.addBlock(request.json)
+    #node.blockprop(request.json)
     return jsonify({'block': block_json})
-
+'''
+@app.route('/block/incomingBlocks', methods=['POST'])
+def serve_block_incomingBlocks():
+    if not request.json:
+        abort(400)
+    return (request.json)
+'''
 @app.route('/connect', methods=['POST'])
 def serve_connect():
     if not request.json or not 'nodeDeclaration' in request.json:
