@@ -26,7 +26,7 @@ class Node:
     def __init__(self):
         self.nodeDeclaration = {'isPeer': True}
         self.blockchain = Blockchain()
-        self.peerList = ['172.19.0.2']
+        self.peerList = ['10.4.7.216']
 
     def getNodeDeclaration(self):
         return self.nodeDeclaration
@@ -71,12 +71,6 @@ class Node:
         block = self.blockchain.makeBlock(block_json)
         self.blockchain.addBlock(block)
         return block.jsonify()
-    '''
-    def blockprop(self,block):
-        for peerIp in self.peerList:
-            url = 'http://'+ peerIp + ':5000'+'/block/incomingBlocks'
-            requests.post(url,json=block,timeout=30).json()
-    '''        
 
 
     def getHostIps(self):
@@ -109,6 +103,13 @@ class Node:
         url = 'http://'+peerIp+':5000/block/sync'
         data = {'topHashChain': topHashChain}
         requests.post(url, json=data, timeout=30)
+
+    def blockprop(self,block):
+        for peerIp in self.peerList:
+            url = 'http://'+ peerIp + ':5000'+'/block/incomingBlocks'
+            data={'block':block}
+            status = requests.post(url,json=data,timeout=30)
+            print(status)
 
     def receiveSync(self, peerIp, peerTopHash):
         print('receiveSync()')
