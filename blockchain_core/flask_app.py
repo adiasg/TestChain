@@ -25,11 +25,7 @@ def connect_db():
 with app.app_context():
     connect_db()
     node = Node()
-<<<<<<< HEAD
-    node.buildTestNode(14)
-=======
-    node.buildTestNode(15)
->>>>>>> 0789b57573b8dd89380aec4cdc622c8f635e6603
+    node.buildTestNode(29)
     g.connectionToDb.close()
 
 @app.before_request
@@ -56,13 +52,6 @@ def serve_block_all():
 @app.route('/block/topHashChain', methods=['GET'])
 def serve_block_topHashChain():
     return jsonify(node.getTopChainNumber(10))
-
-@app.route('/block/inLongestChain', methods=['POST'])
-def serve_block_inLongestChain():
-    if not request.json or not 'hash' in request.json:
-        abort(400)
-    # TODO - This is for debugging, node.blockchain should not be accessible from flask_app
-    return jsonify({'inLongestChain': node.blockchain.inLongestChain(request.json['hash'])})
 
 @app.route('/block/request', methods=['POST'])
 def serve_block():
