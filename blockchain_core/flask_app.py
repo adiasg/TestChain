@@ -61,23 +61,22 @@ def serve_block():
 
 
 @app.route('/block/generateBlocks', methods=['POST'])
-def serve_generateBlocks():
+def serve_block_generateBlocks():
     if not request.json or not 'number_of_blocks_to_generate' in request.json:
         abort(400)
 
     if request.json['prefix']=="":
-        return jsonify(node.nodeGenerateBlocks(int(request.json['number_of_blocks_to_generate'])))
+        return jsonify(node.nodeGenerateBlocks(int(request.json['number_of_blocks_to_generate']),None,request.json['hash'],None))
     else:
         if request.json['hash']=="":
-            return jsonify(node.nodeGenerateBlocksWithPrefix(int(request.json['number_of_blocks_to_generate']),request.json['prefix']))
+            return jsonify(node.nodeGenerateBlocks(int(request.json['number_of_blocks_to_generate']),request.json['prefix'],request.json['hash'],None))
         else:
-            return jsonify(node.nodeInduceFork(int(request.json['number_of_blocks_to_generate']),request.json['hash'],request.json['prefix']))
-            #return jsonify({'status': 'recieved request'})
+            return jsonify(node.nodeGenerateBlocks(int(request.json['number_of_blocks_to_generate']),request.json['prefix'],request.json['hash'],1))
 
 @app.route('/block/submit', methods=['POST'])
 def serve_block_submit():
     block_json = node.addBlock(request.json)
-    node.blockprop(request.json)
+    node.propogateBlock(request.json)
     return jsonify({'block': block_json})
 
 @app.route('/block/incomingBlocks', methods=['POST'])
