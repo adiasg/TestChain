@@ -25,7 +25,7 @@ def connect_db():
 with app.app_context():
     connect_db()
     node = Node()
-    node.buildTestNode(29)
+    node.buildTestNode(14)
     g.connectionToDb.close()
 
 @app.before_request
@@ -53,45 +53,23 @@ def serve_block_all():
 def serve_block_topHashChain():
     return jsonify(node.getTopChainNumber(10))
 
+@app.route('/block/inLongestChain', methods=['POST'])
+def serve_block_inLongestChain():
+    if not request.json or not 'hash' in request.json:
+        abort(400)
+    # TODO - This is for debugging, node.blockchain should not be accessible from flask_app
+    return jsonify({'inLongestChain': node.blockchain.inLongestChain(request.json['hash'])})
+
 @app.route('/block/request', methods=['POST'])
 def serve_block():
     if not request.json or not 'hash' in request.json:
         abort(400)
     return jsonify(node.getBlock(request.json['hash']))
 
-
-@app.route('/block/generateBlocks', methods=['POST'])
-def serve_block_generateBlocks():
-    if not request.json or not 'number_of_blocks_to_generate' in request.json:
-        abort(400)
-
-    if request.json['prefix']=="":
-        return jsonify(node.nodeGenerateBlocks(int(request.json['number_of_blocks_to_generate']),None,request.json['hash'],None))
-    else:
-        if request.json['hash']=="":
-            return jsonify(node.nodeGenerateBlocks(int(request.json['number_of_blocks_to_generate']),request.json['prefix'],request.json['hash'],None))
-        else:
-            return jsonify(node.nodeGenerateBlocks(int(request.json['number_of_blocks_to_generate']),request.json['prefix'],request.json['hash'],1))
-
 @app.route('/block/submit', methods=['POST'])
 def serve_block_submit():
     block_json = node.addBlock(request.json)
-    node.propogateBlock(request.json)
     return jsonify({'block': block_json})
-
-@app.route('/block/incomingBlocks', methods=['POST'])
-def serve_block_incomingBlocks():
-    if(request.method == 'POST'):
-        if not request.json or not 'block' in request.json:
-            abort(400)
-        print('Request.json in incomingBlocks()',request.json['block'])
-        node.addBlock(request.json['block'])
-        return jsonify({'block':'received'})
-'''
-    if(request.method == 'GET'):
-        if not request.json or not 'block' in request.json:
-            abort(400)
-'''
 
 @app.route('/connect', methods=['POST'])
 def serve_connect():
