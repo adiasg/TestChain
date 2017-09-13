@@ -25,7 +25,7 @@ def connect_db():
 with app.app_context():
     connect_db()
     node = Node()
-    node.buildTestNode(14)
+    node.buildTestNode(12)
     g.connectionToDb.close()
 
 @app.before_request

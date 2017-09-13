@@ -16,7 +16,7 @@ class Node:
         self.nodeDeclaration = {'isPeer': True}
         self.blockchain = Blockchain()
         #self.peerList = ['172.19.0.2']
-        peerList = [('172.19.0.2', '5432')]
+        peerList = [('172.19.0.2', '5000')]
         cursor = get_cursor()
         cursor.execute("DROP TABLE IF EXISTS peerList;")
         cursor.execute("CREATE TABLE peerList(peerIp cidr, portNo smallint);")
@@ -103,43 +103,55 @@ class Node:
     def receiveSync(self, peerIp, peerTopHash):
         print('receiveSync()')
         print('\tpeerTopHash:', peerTopHash)
-        if self.blockchain.getBlock(peerTopHash) is None:
-            print('\treturning:', {'status': 'lagging', 'topHash': self.blockchain.getTopHash()})
-            return {'status': 'lagging', 'topHash': self.blockchain.getTopHash()}
+        if self.blockchain.getBlock(peerTopHash) is not None:
+            print('\tblock in db')
+            if self.blockchain.getTopHash()==peerTopHash:
+                reply = {'status': 'synced'}
+                return reply
+            if self.blockchain.inLongestChain(peerTopHash):
+                print('\tblock in longest chain')
+                reply = {'status': 'leading'}
+                reply['topHashChain'] = self.blockchain.getTopChainHash(peerTopHash)
+                return reply
+            else:
+                print('\tblock in fork')
+                reply = {'status': 'leading but forked'}
+                intersectionHash = self.blockchain.findIntersection( self.blockchain.getTopHash(), peerTopHash )
+                print('intersectionHash:', intersectionHash)
+                reply['topHashChain'] = self.blockchain.getTopChainHash( intersectionHash )
+                return reply
         else:
-            print('\treturning:', {'status': 'leading', 'topHashChain': self.blockchain.getTopChainHash(peerTopHash)})
-            return {'status': 'leading', 'topHashChain': self.blockchain.getTopChainHash(peerTopHash)}
+            print('\tblock not in db')
+            reply = {'status': 'forked'}
+            reply['topHash'] = self.blockchain.getTopHash()
+            reply['topHashChain'] = self.blockchain.getTopChainNumber(40)
+            return reply
 
     def initiateSync(self, peerIp):
         print('initiateSync()')
         if peerIp not in self.getHostIps():
             url = 'http://'+peerIp+':5000/block/sync'
             data = {'topHash': self.blockchain.getTopHash()}
-            # TODO this throws exception on timeout
             print("url:", url)
             status_response = requests.post(url, json=data, timeout=30).json()
             print('\tgot status_response:', status_response)
             if status_response is not None and 'status' in status_response:
-                if status_response['status']=='lagging' and 'topHash' in status_response:
-                    if not self.blockchain.inLongestChain(status_response['topHash']):
-                        # TODO - verify forked?
-                        print('\tForked')
-                        self.sendTopHashChain(peerIp, self.blockchain.getTopChainNumber(10))
-                        #sendTopChainNumberThread = Thread(target=self.sendTopHashChain, args=(peerIp, self.blockchain.getTopChainNumber(20)) )
-                        #sendTopChainNumberThread.start()
-                    else:
-                        print('\tLagging')
-                        self.sendTopHashChain(peerIp, self.blockchain.getTopChainHash(status_response['topHash']))
-                        #sendTopHashChainThread = Thread(target=self.sendTopHashChain, args=(peerIp, self.blockchain.getTopChainHash(status_response['topHash'])) )
-                        #sendTopHashChainThread.start()
-                    return {'status': 'Sent topHashChain', 'peerStatus': status_response['status']}
-                elif status_response['status']=='leading' and 'topHashChain' in status_response:
-                    print('\tLeading')
+                status = status_response['status']
+                if(status=='synced'):
+                    pass
+                if(status=='leading' and 'topHashChain' in status_response):
                     self.queryBlocksFromPeer(peerIp, status_response['topHashChain'])
-                    #queryBlocksFromPeerThread = Thread(target=self.queryBlocksFromPeer, args=(peerIp, status_response['topHashChain']) )
-                    #queryBlocksFromPeerThread.start()
-                    return {'status': 'received topHashChain', 'peerStatus': status_response['status']}
-        return {'error': 'Node.initiateSync()'}
+                elif(status=='leading but forked' and 'topHashChain' in status_response):
+                    self.queryBlocksFromPeer(peerIp, status_response['topHashChain'])
+                elif(status=='forked' and 'topHash' in status_response and'topHashChain' in status_response):
+                    if( self.blockchain.getBlock(status_response['topHash']) is None ):
+                        self.queryBlocksFromPeer(peerIp, status_response['topHashChain'])
+                    else:
+                        intersectionHash = self.blockchain.findIntersection( self.blockchain.getTopHash(), status_response['topHash'] )
+                        print('intersectionHash:', intersectionHash)
+                        chainToSend = self.blockchain.getTopChainHash( intersectionHash )
+                        self.sendTopHashChain(peerIp, chainToSend)
+        return {'status': 'sync complete'}
 
     def receiveTopHashChain(self, peerIp, topHashChain):
         print('receiveTopHashChain()')
@@ -152,10 +164,13 @@ class Node:
 
     def queryBlocksFromPeer(self, peerIp, topHashChain):
         print('queryBlocksFromPeer()')
+        if(topHashChain=={}):
+            return
         key=max(topHashChain, key=int)
         key = int(key)
         while(key>=0):
-            self.queryBlockFromPeer(peerIp, topHashChain[str(key)])
+            if( self.queryBlockFromPeer(peerIp, topHashChain[str(key)])==False ):
+                break
             key = key-1
 
     def queryBlockFromPeer(self, peerIp, hash):
@@ -165,10 +180,13 @@ class Node:
         print(data)
         block_json = requests.post(url, json=data, timeout=30).json()
         block = Block.buildFromJson(block_json)
-        if block is not None:
+        if block is not None and self.blockchain.getBlock(block.hash) is None:
             #block.printBlock()
             print('Trying add block')
             self.blockchain.addBlock(block)
+            return True
+        else:
+            return False
 
 class Blockchain:
     def __init__(self):
@@ -362,6 +380,25 @@ class Blockchain:
                 return True
             currentHash = self.getPreviousHash(currentHash)
         return False
+
+    def findIntersection(self, hash1, hash2):
+        block1 = self.getBlock(hash1)
+        block2 = self.getBlock(hash2)
+        if(block1 is None or block2 is None):
+            return None
+        if(block1.height>=block2.height):
+            return self.findIntersectionUtil(block1, block2)
+        else:
+            return self.findIntersectionUtil(block2, block1)
+
+    def findIntersectionUtil(self, block1, block2):
+        # Assuming that block1.height >= block2.height
+        while(block1.height!=block2.height):
+            block1 = self.getPreviousBlock(block1)
+        while(block1.hash!=block2.hash):
+            block1 = self.getPreviousBlock(block1)
+            block2 = self.getPreviousBlock(block2)
+        return block1.hash
 
     def jsonify(self):
         chain_to_send = []

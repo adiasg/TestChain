@@ -69,7 +69,7 @@ def serve_initiateSync():
         data = {}
         data['peerIp'] = request.form['peerIp']
         print('data:', data)
-        status = requests.post(url+'/block/sync/initiate', json=data, timeout=30).json()
+        status = requests.post(url+'/block/sync/initiate', json=data, timeout=200).json()
         return render_template('message.html', message=status)
 
 @app.route('/debug')
