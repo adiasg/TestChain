@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Incoming Blocks{% endblock %}
+
+{% block head %}
+    {{ super() }}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='w3-theme-deep-purple.css')}}">
+{% endblock %}
+
+{% block body %}
+    <div class="w3-container w3-theme-d2 w3-center">
+        <h1>Blocks</h1>
+    </div>
+    <table class="w3-card-4 w3-table w3-striped w3-centered" style="margin: 25px auto; width: 45%">
+        <tr>
+            <th class="w3-theme"><h2>Block :</h2></th>
+        </tr>
+        {% for item in blocks %}
+        <tr>
+            <td><h4>{{item}}</h4></td>
+        </tr>
+        {% endfor %}
+    </table>
+{% endblock %}

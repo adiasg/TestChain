@@ -9,12 +9,6 @@ app = Flask(__name__)
 def connect_db():
     print('connect_db()')
     if not hasattr(g, 'connectionToDb'):
-        '''
-        if(len(sys.argv)>1 and sys.argv[1]=='docker'):
-            connect_str = " dbname='myproject' user='myprojectuser' password='password' host='postgres' port='5432' "
-        else:
-            connect_str = " dbname='myproject' user='myprojectuser' host='localhost' password='password' "
-        '''
         try:
             connect_str = " dbname='myproject' user='myprojectuser' password='password' host='postgres' port='5432' "
             g.connectionToDb = psycopg2.connect(connect_str)
@@ -53,22 +47,30 @@ def serve_block_all():
 def serve_block_topHashChain():
     return jsonify(node.getTopChainNumber(10))
 
-@app.route('/block/inLongestChain', methods=['POST'])
-def serve_block_inLongestChain():
-    if not request.json or not 'hash' in request.json:
-        abort(400)
-    # TODO - This is for debugging, node.blockchain should not be accessible from flask_app
-    return jsonify({'inLongestChain': node.blockchain.inLongestChain(request.json['hash'])})
-
 @app.route('/block/request', methods=['POST'])
 def serve_block():
     if not request.json or not 'hash' in request.json:
         abort(400)
     return jsonify(node.getBlock(request.json['hash']))
 
+
+@app.route('/block/generateBlocks', methods=['POST'])
+def serve_block_generateBlocks():
+    if not request.json or not 'number_of_blocks_to_generate' in request.json:
+        abort(400)
+    if request.json['prefix']=="":
+        return jsonify(node.nodeGenerateBlocks(int(request.json['number_of_blocks_to_generate']),None,request.json['hash'],None))
+    else:
+        if request.json['hash']=="":
+            return jsonify(node.nodeGenerateBlocks(int(request.json['number_of_blocks_to_generate']),request.json['prefix'],request.json['hash'],None))
+        else:
+            return jsonify(node.nodeGenerateBlocks(int(request.json['number_of_blocks_to_generate']),request.json['prefix'],request.json['hash'],1))
+
 @app.route('/block/submit', methods=['POST'])
 def serve_block_submit():
     block_json = node.addBlock(request.json)
+    # TODO - define block propagation conditions
+    node.propagateBlock(request.json)
     return jsonify({'block': block_json})
 
 @app.route('/connect', methods=['POST'])
