@@ -9,12 +9,6 @@ app = Flask(__name__)
 def connect_db():
     print('connect_db()')
     if not hasattr(g, 'connectionToDb'):
-        '''
-        if(len(sys.argv)>1 and sys.argv[1]=='docker'):
-            connect_str = " dbname='myproject' user='myprojectuser' password='password' host='postgres' port='5432' "
-        else:
-            connect_str = " dbname='myproject' user='myprojectuser' host='localhost' password='password' "
-        '''
         try:
             connect_str = " dbname='myproject' user='myprojectuser' password='password' host='postgres' port='5432' "
             g.connectionToDb = psycopg2.connect(connect_str)
@@ -25,7 +19,7 @@ def connect_db():
 with app.app_context():
     connect_db()
     node = Node()
-    node.buildTestNode(29)
+    node.buildTestNode(12)
     g.connectionToDb.close()
 
 @app.before_request
@@ -64,7 +58,6 @@ def serve_block():
 def serve_block_generateBlocks():
     if not request.json or not 'number_of_blocks_to_generate' in request.json:
         abort(400)
-
     if request.json['prefix']=="":
         return jsonify(node.nodeGenerateBlocks(int(request.json['number_of_blocks_to_generate']),None,request.json['hash'],None))
     else:
@@ -76,22 +69,9 @@ def serve_block_generateBlocks():
 @app.route('/block/submit', methods=['POST'])
 def serve_block_submit():
     block_json = node.addBlock(request.json)
-    node.propogateBlock(request.json)
+    # TODO - define block propagation conditions
+    node.propagateBlock(request.json)
     return jsonify({'block': block_json})
-
-@app.route('/block/incomingBlocks', methods=['POST'])
-def serve_block_incomingBlocks():
-    if(request.method == 'POST'):
-        if not request.json or not 'block' in request.json:
-            abort(400)
-        print('Request.json in incomingBlocks()',request.json['block'])
-        node.addBlock(request.json['block'])
-        return jsonify({'block':'received'})
-'''
-    if(request.method == 'GET'):
-        if not request.json or not 'block' in request.json:
-            abort(400)
-'''
 
 @app.route('/connect', methods=['POST'])
 def serve_connect():
