@@ -19,7 +19,9 @@ def serve_status():
 @app.route('/block/all')
 def serve_block_all():
     data = requests.get(url+'/block/all', timeout=30).json()
-    return render_template('block_display.html', blockchain=data, block_display_order=['data', 'difficulty', 'nonce', 'previousHash', 'hash', 'height'])
+    return render_template('block_display.html', blockchain=data, block_display_order=['data', 'difficulty', 'nonce', 'hash','previousHash',  'height', 'sumOfDifficulty'])
+
+
 
 @app.route('/block/request', methods=['GET', 'POST'])
 def serve_block_request():
@@ -40,6 +42,16 @@ def serve_block_submit():
         return render_template('block_submit.html')
     else:
         status = requests.post(url+'/block/submit', json=request.form, timeout=30).json()
+        return render_template('message.html', message=status)
+
+
+
+@app.route('/block/generateBlocks', methods=['GET', 'POST'])
+def serve_block_generate():
+    if(request.method == 'GET'):
+        return render_template('block_generate.html')
+    else:
+        status = requests.post(url+'/block/generateBlocks', json=request.form, timeout=30).json()
         return render_template('message.html', message=status)
 
 @app.route('/connect', methods=['GET', 'POST'])

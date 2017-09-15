@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title%}Generate Blocks{% endblock %}
+
+{% block body %}
+    <div class="w3-container w3-teal">
+        <h2>Generate Blocks</h2>
+    </div>
+    <br>
+
+    <form class="w3-containers" method="POST">
+        <label class="w3-text"><strong>Number of blocks to generate</strong></label>
+        <input class="w3-input w3-border w3-light-grey" name="number_of_blocks_to_generate" type="text" value="0">
+        <br>
+        <label class="w3-text"><strong>Hash of Block to Fork</strong></label>
+        <input class="w3-input w3-border w3-light-grey" name="hash" type="text" value="Some hash">
+        <br>
+        <label class="w3-text"><strong>Prefix</strong></label>
+        <input class="w3-input w3-border w3-light-grey" name="prefix" type="text" value="Some prefix">
+        <br>
+        <!--
+        <label class="w3-text"><strong>Nonce:</strong></label>
+        <input class="w3-input w3-border w3-light-grey" name="nonce" type="number" value=0>
+        <br>
+        <input class="w3-check" name="mine" type="checkbox" checked="checked">
+        <label class="w3-text"><strong>Mine</strong></label>
+        <br>
+        <br>
+        -->
+        <div style="display: block">
+            <button class="w3-btn w3-blue-grey">Generate</button>
+        </div>
+    </form>
+
+    <!--
+    <style>
+        .form-block-title {
+            display: inline-block;
+            width: 10%
+        }
+    </style>
+    <form action="" method="POST">
+        <div class="form-block-title">Data:</div>
+        <input class="w3-light-grey w3-border" type="text" name="data" value="Some data">
+        <br>
+        <div class="form-block-title">Previous Hash:</div>
+        <input class="w3-light-grey w3-border" type="text" name="previous_hash" value="Some previous hash">
+        <br>
+        <div class="form-block-title">Difficulty:</div>
+        <input class="w3-light-grey w3-border" type="number" name="difficulty" value=2>
+        <br>
+        <div class="form-block-title">Nonce:</div>
+        <input class="w3-light-grey w3-border" type="number" name="nonce" value=0>
+        <br>
+        <input class="w3-blue-grey" type="submit" value="Submit">
+    </form>
+    -->
+
+{% endblock %}
+

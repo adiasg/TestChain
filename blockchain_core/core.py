@@ -16,7 +16,7 @@ class Node:
         self.nodeDeclaration = {'isPeer': True}
         self.blockchain = Blockchain()
         #self.peerList = ['172.19.0.2']
-        peerList = [('172.19.0.2', '5000')]
+        peerList = [('10.4.7.216', '5000')]
         cursor = get_cursor()
         cursor.execute("DROP TABLE IF EXISTS peerList;")
         cursor.execute("CREATE TABLE peerList(peerIp cidr, portNo smallint);")
@@ -48,6 +48,16 @@ class Node:
 
     def buildTestNode(self, numberOfBlocks):
         self.blockchain.buildTestBlockchain(numberOfBlocks)
+	
+    def nodeGenerateBlocks(self, numberOfBlocks,prefix,hash,fork):
+	    self.blockchain.generateBlocks(numberOfBlocks,prefix,hash,fork)
+	    if prefix is None:
+	        return {'status': 'generated '+str(numberOfBlocks)+' blocks'}
+	    else:
+	        if fork is None:
+	            return {'status': 'generated '+str(numberOfBlocks)+' blocks with prefix : ' + prefix}
+	        else:
+	            return {'status': 'generated '+str(numberOfBlocks)+' blocks with prefix : ' + prefix +'   Starting from hash : '+ hash}
 
     def getTopChainNumber(self, number_of_hashes_to_send):
         return self.blockchain.getTopChainNumber(number_of_hashes_to_send)
@@ -99,6 +109,13 @@ class Node:
         url = 'http://'+peerIp+':5000/block/sync'
         data = {'topHashChain': topHashChain}
         requests.post(url, json=data, timeout=30)
+	
+    def propogateBlock(self,block):
+        for peerIp in self.getPeerList():
+            url = 'http://'+ peerIp + ':5000'+'/block/incomingBlocks'
+            data={'block':block}
+            status = requests.post(url,json=data,timeout=30)
+            print(status)
 
     def receiveSync(self, peerIp, peerTopHash):
         print('receiveSync()')
@@ -343,7 +360,43 @@ class Blockchain:
             nextBlock = Block({"Data": "Block number " + str(iter)}, topBlock.hash, difficulty=2, mine=True)
             self.addBlock(nextBlock)
             topBlock = nextBlock
+	
+	
+    def generateBlocks(self, numberOfBlocks,prefix,hash,fork):
+        if fork is None:
+            topBlock = self.getBlock(self.getTopHash())
+            topBlocktemp = self.getBlock(self.getTopHash())
+        else:
+            blocktemp = self.getBlock(hash)
+            block = self.getBlock(hash)
+        for iter in range(1,numberOfBlocks+1):
+            if prefix is None:
+                nextBlock = Block({"Data": "Block number " + str(iter+topBlock.height)}, topBlocktemp.hash, difficulty=2, mine=True)
+            else:
+                if fork is None:
+                    nextBlock = Block({prefix +" : " + "Data": "Block number " + str(iter+topBlock.height)}, topBlocktemp.hash, difficulty=2, mine=True)
+                else:
+                    nextBlock = Block({prefix + " : " + "Data": "Block number " + str(iter+block.height)}, blocktemp.hash, difficulty=2, mine=True)
+            self.addBlock(nextBlock)
+            if fork is None:
+                topBlocktemp = nextBlock
+            else:
+                blocktemp = nextBlock
 
+    '''
+    def inducefork(self,numberOfBlocks,hash,prefix):
+        block = self.getBlock(hash)
+        if block is None:
+            print ('hash not found in inducefork() method')
+            return
+        blocktemp = self.getBlock(hash)
+        for iter in range(1,numberOfBlocks+1):
+            nextBlock = Block({prefix + " : " + "Data": "Block number " + str(iter+block.height)}, blocktemp.hash, difficulty=2, mine=True)
+            self.addBlock(nextBlock)
+            blocktemp = nextBlock
+    '''
+	
+	
     def getTopChainNumber(self, number_of_hashes_to_send):
         # TODO handle no such block in db
         topHash = self.getTopHash()
