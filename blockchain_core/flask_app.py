@@ -7,14 +7,7 @@ from core import Block, Blockchain, Node
 app = Flask(__name__)
 
 def connect_db():
-    print('connect_db()')
     if not hasattr(g, 'connectionToDb'):
-        '''
-        if(len(sys.argv)>1 and sys.argv[1]=='docker'):
-            connect_str = " dbname='myproject' user='myprojectuser' password='password' host='postgres' port='5432' "
-        else:
-            connect_str = " dbname='myproject' user='myprojectuser' host='localhost' password='password' "
-        '''
         try:
             connect_str = " dbname='myproject' user='myprojectuser' password='password' host='postgres' port='5432' "
             g.connectionToDb = psycopg2.connect(connect_str)
@@ -66,38 +59,17 @@ def serve_block():
         abort(400)
     return jsonify(node.getBlock(request.json['hash']))
 
-
 @app.route('/block/generateBlocks', methods=['POST'])
 def serve_block_generateBlocks():
     if not request.json or not 'number_of_blocks_to_generate' in request.json:
         abort(400)
-    return jsonify(node.nodeGenerateBlocks(int(request.json['number_of_blocks_to_generate']),request.json['prefix'],request.json['hash']))
-'''
-    if request.json['prefix']=="":
-        return jsonify(node.nodeGenerateBlocks(int(request.json['number_of_blocks_to_generate']),None,request.json['hash'],None))
-    else:
-        if request.json['hash']=="":
-            return jsonify(node.nodeGenerateBlocks(int(request.json['number_of_blocks_to_generate']),request.json['prefix'],request.json['hash'],None))
-        else:
-            return jsonify(node.nodeGenerateBlocks(int(request.json['number_of_blocks_to_generate']),request.json['prefix'],request.json['hash'],1))
-'''
+    return jsonify(node.generateBlocks(int(request.json['number_of_blocks_to_generate']),request.json['prefix'],request.json['hash']))
 
 @app.route('/block/submit', methods=['POST'])
 def serve_block_submit():
     block_json = node.addBlock(request.json)
-    node.propogateBlock(request.json)
+    #node.propogateBlock(request.json)
     return jsonify({'block': block_json})
-
-'''
-@app.route('/block/incomingBlocks', methods=['POST'])
-def serve_block_incomingBlocks():
-    if(request.method == 'POST'):
-        if not request.json or not 'block' in request.json:
-            abort(400)
-        print('Request.json in incomingBlocks()',request.json['block'])
-        node.addBlock(request.json['block'])
-        return jsonify({'block':'received'})
-'''
 
 @app.route('/connect', methods=['POST'])
 def serve_connect():

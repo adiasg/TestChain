@@ -3,21 +3,16 @@ import hashlib
 import json
 import pickle
 import psycopg2
-import netifaces
 import requests
-from threading import Thread
 
-  
 def get_cursor():
-    # TODO use single cursor as attr of g
     return g.connectionToDb.cursor()
 
 class Node:
     def __init__(self):
         self.nodeDeclaration = {'isPeer': True}
         self.blockchain = Blockchain()
-        #self.peerList = ['172.19.0.2']
-        peerList = [('10.4.7.216', '5000')]
+        peerList = [('172.19.0.2', '5000'), ('172.19.0.1', '5000'), ('10.4.7.216', '5000')]
         cursor = get_cursor()
         cursor.execute("DROP TABLE IF EXISTS peerList;")
         cursor.execute("CREATE TABLE peerList(peerIp cidr, portNo smallint);")
@@ -44,13 +39,20 @@ class Node:
         cursor.close()
         return peerList
 
+     def getPeerPortNo(self, peerIp):
+        cursor = get_cursor()
+        cursor.execute("SELECT portNo FROM peerList WHERE peerIp = %s;", (peerIp,))
+        portNo = cursor.fetchone()
+        cursor.close()
+        return portNo[0]
+
     def getTopHash(self):
         return self.blockchain.getTopHash()
 
     def buildTestNode(self, numberOfBlocks):
         self.blockchain.buildTestBlockchain(numberOfBlocks)
 
-    def nodeGenerateBlocks(self, numberOfBlocks,prefix,hash):
+    def generateBlocks(self, numberOfBlocks,prefix,hash):
 	    self.blockchain.generateBlocks(numberOfBlocks,prefix,hash)
 	    if hash == "":
 		    return {'status': 'generated '+str(numberOfBlocks)+' blocks with prefix : ' + prefix}
@@ -92,7 +94,7 @@ class Node:
         if(peerIp not in self.getPeerList()):
             hostIpList = self.getHostIps()
             if(peerIp not in hostIpList):
-                url = 'http://'+peerIp+':5000/'
+                url = 'http://'+peerIp+':'+str(self.getPeerPortNo(peerIp))+'/'
                 peerDeclaration = requests.get(url,timeout=30).json()
                 self.addPeer(peerIp, peerDeclaration['nodeDeclaration'])
 
@@ -104,13 +106,13 @@ class Node:
             cursor.close()
 
     def sendTopHashChain(self, peerIp, topHashChain):
-        url = 'http://'+peerIp+':5000/block/sync'
+        url = 'http://'+peerIp+':'+str(self.getPeerPortNo(peerIp))+'/block/sync'
         data = {'topHashChain': topHashChain}
         requests.post(url, json=data, timeout=30)
 
     def propogateBlock(self,block):
         for peerIp in self.getPeerList():
-            url = 'http://'+ peerIp + ':5000'+'/block/submit'
+            url = 'http://'+peerIp+':'+str(self.getPeerPortNo(peerIp))+'/block/submit'
             data={'block':block}
             status = requests.post(url,json=data,timeout=30)
             print(status)
@@ -145,7 +147,7 @@ class Node:
     def initiateSync(self, peerIp):
         print('initiateSync()')
         if peerIp not in self.getHostIps():
-            url = 'http://'+peerIp+':5000/block/sync'
+            url = 'http://'+peerIp+':'+str(self.getPeerPortNo(peerIp))+'/block/sync'
             data = {'topHash': self.blockchain.getTopHash()}
             print("url:", url)
             status_response = requests.post(url, json=data, timeout=30).json()
@@ -190,7 +192,7 @@ class Node:
 
     def queryBlockFromPeer(self, peerIp, hash):
         print('queryBlockFromPeer()')
-        url = 'http://'+peerIp+':5000/block/request'
+        url = 'http://'+peerIp+':'+str(self.getPeerPortNo(peerIp))+'/block/request'
         data = {'hash': hash}
         print(data)
         block_json = requests.post(url, json=data, timeout=30).json()
