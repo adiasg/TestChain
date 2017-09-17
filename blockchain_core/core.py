@@ -39,7 +39,7 @@ class Node:
         cursor.close()
         return peerList
 
-     def getPeerPortNo(self, peerIp):
+    def getPeerPortNo(self, peerIp):
         cursor = get_cursor()
         cursor.execute("SELECT portNo FROM peerList WHERE peerIp = %s;", (peerIp,))
         portNo = cursor.fetchone()
@@ -52,12 +52,13 @@ class Node:
     def buildTestNode(self, numberOfBlocks):
         self.blockchain.buildTestBlockchain(numberOfBlocks)
 
-    def generateBlocks(self, numberOfBlocks,prefix,hash):
-	    self.blockchain.generateBlocks(numberOfBlocks,prefix,hash)
-	    if hash == "":
-		    return {'status': 'generated '+str(numberOfBlocks)+' blocks with prefix : ' + prefix}
-	    else:
- 	        return {'status': 'generated '+str(numberOfBlocks)+' blocks with prefix : ' + prefix +'   Starting from hash : '+ hash}
+    def generateBlocks(self, numberOfBlocks, prefix, hash, reset=False):
+        success_status = self.blockchain.generateBlocks(numberOfBlocks, prefix, hash, reset)
+        topHash = self.getTopHash()
+        if hash == "":
+            return {'success': success_status, 'topHash': topHash, 'status': 'generated '+str(numberOfBlocks)+' blocks with prefix: '+prefix}
+        else:
+            return {'success': success_status, 'topHash': topHash, 'status': 'generated '+str(numberOfBlocks)+' blocks with prefix : '+prefix + ' starting from hash : '+hash}
 
     def getTopChainNumber(self, number_of_hashes_to_send):
         return self.blockchain.getTopChainNumber(number_of_hashes_to_send)
@@ -156,13 +157,15 @@ class Node:
                 status = status_response['status']
                 if(status=='synced'):
                     pass
-                if(status=='leading' and 'topHashChain' in status_response):
+                elif(status=='leading' and 'topHashChain' in status_response):
                     self.queryBlocksFromPeer(peerIp, status_response['topHashChain'])
                 elif(status=='leading but forked' and 'topHashChain' in status_response):
                     self.queryBlocksFromPeer(peerIp, status_response['topHashChain'])
                 elif(status=='forked' and 'topHash' in status_response and'topHashChain' in status_response):
                     if( self.blockchain.getBlock(status_response['topHash']) is None ):
                         self.queryBlocksFromPeer(peerIp, status_response['topHashChain'])
+                        chainToSend = self.blockchain.getTopChainNumber(40)
+                        self.sendTopHashChain(peerIp, chainToSend)
                     else:
                         intersectionHash = self.blockchain.findIntersection( self.blockchain.getTopHash(), status_response['topHash'] )
                         print('intersectionHash:', intersectionHash)
@@ -185,6 +188,8 @@ class Node:
             return
         key=max(topHashChain, key=int)
         key = int(key)
+        while(key>=0 and self.blockchain.getBlock(topHashChain[str(key)]) is not None):
+            key = key-1
         while(key>=0):
             if( self.queryBlockFromPeer(peerIp, topHashChain[str(key)])==False ):
                 break
@@ -210,7 +215,7 @@ class Blockchain:
         cursor = get_cursor()
         cursor.execute("DROP TABLE IF EXISTS blocks;")
         #cursor.execute("CREATE TABLE blocks(hash text, block bytea);")
-        cursor.execute("CREATE TABLE blocks(hash CHAR(64) PRIMARY KEY, block bytea, nextHash CHAR(64));")
+        cursor.execute("CREATE TABLE blocks(hash CHAR(64) PRIMARY KEY, block bytea);")
         g.connectionToDb.commit()
         cursor.execute("DROP TABLE IF EXISTS status;")
         cursor.execute("CREATE TABLE status(key text, value text);")
@@ -304,33 +309,6 @@ class Blockchain:
         topHash=self.getTopHash()
         return self.findSumOfDifficulty(topHash)
 
-    def getNextHash(self, hash):
-        cursor = get_cursor()
-        cursor.execute( "SELECT nextHash FROM blocks WHERE hash = %s;" , (hash, ) )
-        res = cursor.fetchone()
-        if(res is None):
-            print('Blockchain.getNextHash() is returning None for block with')
-            print('hash:', hash)
-            return None
-        nextHash = res[0]
-        cursor.close()
-        return nextHash
-
-    def setNextHash(self, hash, nextHash):
-        # TODO use single cursor as attr of g
-        cursor = get_cursor()
-        cursor.execute( "UPDATE blocks SET nextHash = %s WHERE hash = %s;", (nextHash, hash) )
-        g.connectionToDb.commit()
-        cursor.close()
-
-    def updateNextHashes(self):
-        topHash = self.getTopHash()
-        previousHash = self.getPreviousHash(topHash)
-        while( self.getNextHash(previousHash) != topHash ):
-            self.setNextHash(previousHash, topHash)
-            topHash = previousHash
-            previousHash = self.getPreviousHash(topHash)
-
     def addBlock(self, block):
         if block.verify():
             previousBlock = self.getPreviousBlock(block)
@@ -346,7 +324,6 @@ class Blockchain:
                 newHeight = block.height
                 if(self.getMaxSumOfDifficulty() < newSumOfDifficulty):
                     self.storeTopHash(block.hash)
-                    self.updateNextHashes()
                 g.connectionToDb.commit()
                 print('Added block:')
                 block.printBlock()
@@ -361,31 +338,33 @@ class Blockchain:
             self.addBlock(nextBlock)
             topBlock = nextBlock
 
-
-    def generateBlocks(self, numberOfBlocks,prefix,hash):
+    def generateBlocks(self, numberOfBlocks, prefix, hash, reset=False):
+        if(reset):
+            cursor = get_cursor()
+            cursor.execute("DROP TABLE IF EXISTS blocks;")
+            #cursor.execute("CREATE TABLE blocks(hash text, block bytea);")
+            cursor.execute("CREATE TABLE blocks(hash CHAR(64) PRIMARY KEY, block bytea);")
+            g.connectionToDb.commit()
+            cursor.execute("DROP TABLE IF EXISTS status;")
+            cursor.execute("CREATE TABLE status(key text, value text);")
+            g.connectionToDb.commit()
+            genesisBlock = Block.generateGenesisBlock()
+            cursor.execute("INSERT INTO blocks(hash, block) VALUES (%s, %s);", (genesisBlock.hash, pickle.dumps(genesisBlock)) )
+            g.connectionToDb.commit()
+            cursor.close()
+            self.storeTopHash(genesisBlock.hash)
         if hash == "":
             topBlock = self.getBlock(self.getTopHash())
-            topBlocktemp = self.getBlock(self.getTopHash())
+            #topBlocktemp = self.getBlock(self.getTopHash())
         else:
             topBlock = self.getBlock(hash)
-            topBlocktemp = self.getBlock(hash)
-        for iter in range(1,numberOfBlocks+1):
-            nextBlock = Block({"Data": prefix + " Block number " + str(iter+topBlock.height)}, topBlocktemp.hash, difficulty=2, mine=True)
-            self.addBlock(nextBlock)
-            topBlocktemp = nextBlock
-    '''
-    def inducefork(self,numberOfBlocks,hash,prefix):
-        block = self.getBlock(hash)
-        if block is None:
-            print ('hash not found in inducefork() method')
-            return
-        blocktemp = self.getBlock(hash)
-        for iter in range(1,numberOfBlocks+1):
-            nextBlock = Block({prefix + " : " + "Data": "Block number " + str(iter+block.height)}, blocktemp.hash, difficulty=2, mine=True)
-            self.addBlock(nextBlock)
-            blocktemp = nextBlock
-    '''
-
+            #topBlocktemp = self.getBlock(hash)
+        if topBlock is None:
+            return False
+        for iter in range(numberOfBlocks):
+            topBlock = Block({"Data": prefix + "Block number " + str(1+topBlock.height)}, topBlock.hash, difficulty=2, mine=True)
+            self.addBlock(topBlock)
+        return True
 
     def getTopChainNumber(self, number_of_hashes_to_send):
         # TODO handle no such block in db

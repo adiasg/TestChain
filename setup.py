@@ -9,6 +9,6 @@ setup(name='blockchain_python',
       license='MIT',
       packages=['blockchain_core', 'blockchain_gui'],
       install_requires=[
-          'flask', 'psycopg2', 'netifaces'
+          'flask', 'psycopg2'
       ],
       zip_safe=False)

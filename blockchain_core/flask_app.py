@@ -46,6 +46,14 @@ def serve_block_all():
 def serve_block_topHashChain():
     return jsonify(node.getTopChainNumber(10))
 
+@app.route('/block/topHash', methods=['GET'])
+def serve_block_topHash():
+    return jsonify({'topHash': node.getTopHash()})
+
+@app.route('/block/topBlock', methods=['GET'])
+def serve_block_topBlock():
+    return jsonify({'topBlock': node.blockchain.getBlock(node.getTopHash()).jsonify() })
+
 @app.route('/block/inLongestChain', methods=['POST'])
 def serve_block_inLongestChain():
     if not request.json or not 'hash' in request.json:
@@ -61,9 +69,11 @@ def serve_block():
 
 @app.route('/block/generateBlocks', methods=['POST'])
 def serve_block_generateBlocks():
-    if not request.json or not 'number_of_blocks_to_generate' in request.json:
+    if not request.json or not 'numberOfBlocks' in request.json or not 'prefix' in request.json or not 'hash' in request.json:
         abort(400)
-    return jsonify(node.generateBlocks(int(request.json['number_of_blocks_to_generate']),request.json['prefix'],request.json['hash']))
+    if 'reset' in request.json:
+        return jsonify(node.generateBlocks( int(request.json['numberOfBlocks']), request.json['prefix'], request.json['hash'], request.json['reset'] ))
+    return jsonify(node.generateBlocks(int(request.json['numberOfBlocks']),request.json['prefix'],request.json['hash']))
 
 @app.route('/block/submit', methods=['POST'])
 def serve_block_submit():
