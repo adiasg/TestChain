@@ -3,6 +3,7 @@ import json
 import psycopg2
 import sys
 import os
+import time
 from core import Block, Blockchain, Node
 
 app = Flask(__name__)
@@ -123,6 +124,7 @@ def serve_block_sync_initiate():
     return jsonify(node.initiateSync(request.json['peerIp']))
 
 if __name__ == '__main__':
+    time.sleep(10)
     if(len(sys.argv)>1 and sys.argv[1]=='debug'):
         app.run(debug=True, port=5000)
     else:

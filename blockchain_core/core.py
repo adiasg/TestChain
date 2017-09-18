@@ -12,7 +12,7 @@ class Node:
     def __init__(self):
         self.nodeDeclaration = {'isPeer': True}
         self.blockchain = Blockchain()
-        peerList = [('172.19.0.1', '5000'), ('172.19.0.2', '5000'), ('172.19.0.3', '5000'), ('172.19.0.4', '5000'), ('10.4.7.216', '5000')]
+        peerList = [('172.24.0.2', '5000'), ('172.24.0.5', '5000'), ('172.32.0.2', '5000'), ('172.32.0.5', '5000'), ('10.4.7.216', '5000')]
         cursor = get_cursor()
         cursor.execute("DROP TABLE IF EXISTS peerList;")
         cursor.execute("CREATE TABLE peerList(peerIp cidr, portNo smallint);")
@@ -40,11 +40,12 @@ class Node:
         return peerList
 
     def getPeerPortNo(self, peerIp):
-        cursor = get_cursor()
-        cursor.execute("SELECT portNo FROM peerList WHERE peerIp = %s;", (peerIp,))
-        portNo = cursor.fetchone()
-        cursor.close()
-        return portNo[0]
+        return '5000'
+        #cursor = get_cursor()
+        #cursor.execute("SELECT portNo FROM peerList WHERE peerIp = %s;", (peerIp,))
+        #portNo = cursor.fetchone()
+        #cursor.close()
+        #return portNo[0]
 
     def getTopHash(self):
         return self.blockchain.getTopHash()

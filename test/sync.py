@@ -2,10 +2,13 @@ import unittest
 import test
 from test import printBlock
 
+peer1 = '172.32.0.2'
+peer2 = '172.32.0.5'
+
 class SimpleLaggingTestCase(unittest.TestCase):
     def setUp(self):
-        self.peer1 = '172.19.0.3'
-        self.peer2 = '172.19.0.2'
+        self.peer1 = peer1
+        self.peer2 = peer2
 
         self.data1 = {}
         self.data1['prefix'] = "TEST-SIMPLE-LAGGING "
@@ -45,8 +48,8 @@ class SimpleLaggingTestCase(unittest.TestCase):
 
 class SimpleLeadingTestCase(unittest.TestCase):
     def setUp(self):
-        self.peer1 = '172.19.0.3'
-        self.peer2 = '172.19.0.2'
+        self.peer1 = peer1
+        self.peer2 = peer2
 
         self.data1 = {}
         self.data1['prefix'] = "TEST-SIMPLE-LEADING "
@@ -85,8 +88,8 @@ class SimpleLeadingTestCase(unittest.TestCase):
 
 class ForkedButLeadingTestCase(unittest.TestCase):
     def setUp(self):
-        self.peer1 = '172.19.0.3'
-        self.peer2 = '172.19.0.2'
+        self.peer1 = peer1
+        self.peer2 = peer2
 
         self.data1 = {}
         self.data1['prefix'] = "TEST-FORKED-LEADING "
@@ -126,8 +129,8 @@ class ForkedButLeadingTestCase(unittest.TestCase):
 
 class ForkedButLaggingTestCase(unittest.TestCase):
     def setUp(self):
-        self.peer1 = '172.19.0.3'
-        self.peer2 = '172.19.0.2'
+        self.peer1 = peer1
+        self.peer2 = peer2
 
         self.data1 = {}
         self.data1['prefix'] = "TEST-FORKED-LAGGING "
