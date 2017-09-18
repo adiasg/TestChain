@@ -12,7 +12,7 @@ class Node:
     def __init__(self):
         self.nodeDeclaration = {'isPeer': True}
         self.blockchain = Blockchain()
-        peerList = [('172.19.0.2', '5000'), ('172.19.0.1', '5000'), ('10.4.7.216', '5000')]
+        peerList = [('172.19.0.1', '5000'), ('172.19.0.2', '5000'), ('172.19.0.3', '5000'), ('172.19.0.4', '5000'), ('10.4.7.216', '5000')]
         cursor = get_cursor()
         cursor.execute("DROP TABLE IF EXISTS peerList;")
         cursor.execute("CREATE TABLE peerList(peerIp cidr, portNo smallint);")

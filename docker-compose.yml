@@ -1,24 +1,51 @@
 version: '2'
 
 services:
-    web:
+    web1:
+        environment:
+            - postgres_host=postgres1
         restart: always
         build: ./blockchain_core
         ports:
-            - "5010:5000"
+            - "5000"
         command: python flask_app.py
         depends_on:
-            - postgres
+            - postgres1
 
-    postgres:
+    postgres1:
         restart: always
         build: ./postgres
         volumes_from:
-            - data
+            - data1
         ports:
-            - "5433:5432"
+            - "5432"
 
-    data:
+    data1:
+        image: postgres:9.6
+        volumes:
+            - /var/lib/postgresql
+        command: "true"
+
+    web2:
+        environment:
+            - postgres_host=postgres2
+        restart: always
+        build: ./blockchain_core
+        ports:
+            - "5000"
+        command: python flask_app.py
+        depends_on:
+            - postgres2
+
+    postgres2:
+        restart: always
+        build: ./postgres
+        volumes_from:
+            - data2
+        ports:
+            - "5432"
+
+    data2:
         image: postgres:9.6
         volumes:
             - /var/lib/postgresql

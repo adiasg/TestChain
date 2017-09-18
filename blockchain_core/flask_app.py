@@ -2,6 +2,7 @@ from flask import Flask, jsonify, g, request, abort, redirect, url_for
 import json
 import psycopg2
 import sys
+import os
 from core import Block, Blockchain, Node
 
 app = Flask(__name__)
@@ -9,7 +10,10 @@ app = Flask(__name__)
 def connect_db():
     if not hasattr(g, 'connectionToDb'):
         try:
-            connect_str = " dbname='myproject' user='myprojectuser' password='password' host='postgres' port='5432' "
+            if "postgres_host" in os.environ:
+                connect_str = " dbname='myproject' user='myprojectuser' password='password' host='"+os.environ.get('postgres_host')+"' port='5432' "
+            else:
+                connect_str = " dbname='myproject' user='myprojectuser' password='password' host='postgres' port='5432' "
             g.connectionToDb = psycopg2.connect(connect_str)
         except psycopg2.OperationalError:
             connect_str = " dbname='myproject' user='myprojectuser' host='localhost' password='password' "
@@ -122,4 +126,5 @@ if __name__ == '__main__':
     if(len(sys.argv)>1 and sys.argv[1]=='debug'):
         app.run(debug=True, port=5000)
     else:
+        postgres_host = None
         app.run(host='0.0.0.0', debug=False, port=5000, threaded=True)
