@@ -118,7 +118,7 @@ def serve_block_sync_initiate():
     return jsonify(node.initiateSync(request.json['peerIp']))
 
 if __name__ == '__main__':
-    time.sleep(5)
+    #time.sleep(5)
     with app.app_context():
         connect_db()
         node = Node()

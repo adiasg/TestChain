@@ -269,7 +269,10 @@ class Blockchain:
             print('Blockchain.getBlock() is returning None for')
             print('hash:', hash)
             return None
+        #print('Got res[0]:', res[0])
         block = Block.buildFromJson(res[0])
+        block.setSumOfDifficulty(res[0]['sumOfDifficulty'])
+        block.setHeight(res[0]['height'])
         cursor.close()
         return block
 
@@ -316,25 +319,37 @@ class Blockchain:
 
     def addBlock(self, block):
         if block.verify():
+            #print("---------------------------------------------------------------")
             previousBlock = self.getPreviousBlock(block)
             if previousBlock is None:
                 print("\tBlockchain.addBlock():\n\tNo previous block for block with previousHash:", block.previousHash)
+                #print("---------------------------------------------------------------")
                 return
             else:
+                #print("Got previous block:")
+                #previousBlock.printBlock()
+                #print("Setting height:", previousBlock.height + 1)
                 block.setHeight( previousBlock.height + 1 )
                 block.setSumOfDifficulty(previousBlock.sumOfDifficulty + len(block.hash)-len((block.hash).lstrip('0')))
                 cursor = get_cursor()
+                #print('Adding block:')
+                #print(block.stringify())
                 cursor.execute("INSERT INTO blocks_"+db_suffix+"(hash, block, time_of_insertion) VALUES (%s,%s, now());", (block.hash, block.stringify()))
                 newSumOfDifficulty = self.findSumOfDifficulty(block.hash)
+                #print("Found newSumOfDifficulty:", newSumOfDifficulty)
                 newHeight = block.height
                 if(self.getMaxSumOfDifficulty() < newSumOfDifficulty):
+                    #print('Storing topHash:', block.hash)
                     self.storeTopHash(block.hash)
                 g.connectionToDb.commit()
                 print('Added block:')
                 block.printBlock()
+                #print('Checking added block')
+                #self.getBlock(block.hash).printBlock()
         else:
             print('Block not verified')
             block.printBlock()
+        #print("---------------------------------------------------------------")
 
     def buildTestBlockchain(self, numberOfBlocks):
         topBlock = self.getBlock(self.getTopHash())
@@ -440,8 +455,8 @@ class Blockchain:
 class Block:
     def __init__(self, data, previousHash, difficulty=1, nonce=0, mine=False):
         self.data = data
-        self.difficulty = difficulty
-        self.nonce = nonce
+        self.difficulty = int(difficulty)
+        self.nonce = int(nonce)
         self.previousHash = previousHash
         self.height = -1
         self.sumOfDifficulty = 0
@@ -450,15 +465,15 @@ class Block:
             self.mineBlock()
 
     def setHeight(self, height):
-        self.height = height
+        self.height = int(height)
         return
 
     def setDifficulty(self, difficulty):
-        self.difficulty = difficulty
+        self.difficulty = int(difficulty)
         return
 
     def setSumOfDifficulty(self, sumOfDifficulty):
-        self.sumOfDifficulty = sumOfDifficulty
+        self.sumOfDifficulty = int(sumOfDifficulty)
         return
 
     def hashBlock(self):
@@ -474,7 +489,14 @@ class Block:
         return
 
     def jsonify(self):
-        return self.__dict__
+        block_json = {}
+        block_json['data'] = self.data
+        block_json['difficulty'] = self.difficulty
+        block_json['nonce'] = self.nonce
+        block_json['previousHash'] = self.previousHash
+        block_json['height'] = self.height
+        block_json['sumOfDifficulty'] = self.sumOfDifficulty
+        return block_json
 
     def stringify(self):
         return json.dumps(self.jsonify())
@@ -505,14 +527,19 @@ class Block:
 
     @staticmethod
     def buildFromJson(block_json):
-        if( 'data' in block_json and
-            'previousHash' in block_json and
-            len(block_json['previousHash'])==64 and
-            'difficulty' in block_json and
+        #print('Got block_json:', block_json)
+        if( 'data' in block_json and \
+            'previousHash' in block_json and \
+            len(block_json['previousHash'])==64 and \
+            'difficulty' in block_json and \
             'nonce' in block_json):
-            if( 'mine' in block_json and
+            if( 'mine' in block_json and \
                 block_json['mine']=='on'):
+                #print('Mining block')
                 block = Block(block_json['data'], block_json['previousHash'], difficulty=int(block_json['difficulty']), mine=True)
             else:
+                #print('Not mining block')
                 block = Block(block_json['data'], block_json['previousHash'], difficulty=int(block_json['difficulty']), nonce=int(block_json['nonce']))
+            #print('Returning block:')
+            #block.printBlock()
             return block
