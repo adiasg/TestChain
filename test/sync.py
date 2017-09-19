@@ -3,7 +3,7 @@ import test
 from test import printBlock
 
 peer1 = '172.32.0.4'
-peer2 = '172.32.0.8'
+peer2 = '172.32.0.5'
 
 class SimpleLaggingTestCase(unittest.TestCase):
     def setUp(self):

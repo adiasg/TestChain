@@ -20,12 +20,6 @@ def connect_db():
             connect_str = " dbname='myproject' user='myprojectuser' host='localhost' password='password' "
             g.connectionToDb = psycopg2.connect(connect_str)
 
-with app.app_context():
-    connect_db()
-    node = Node()
-    node.buildTestNode(12)
-    g.connectionToDb.close()
-
 @app.before_request
 def beforeRequest():
     connect_db()
@@ -124,7 +118,12 @@ def serve_block_sync_initiate():
     return jsonify(node.initiateSync(request.json['peerIp']))
 
 if __name__ == '__main__':
-    time.sleep(10)
+    time.sleep(5)
+    with app.app_context():
+        connect_db()
+        node = Node()
+        node.buildTestNode(12)
+        g.connectionToDb.close()
     if(len(sys.argv)>1 and sys.argv[1]=='debug'):
         app.run(debug=True, port=5000)
     else:

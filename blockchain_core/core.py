@@ -220,13 +220,13 @@ class Blockchain:
     def __init__(self):
         cursor = get_cursor()
         cursor.execute("DROP TABLE IF EXISTS blocks_"+db_suffix+";")
-        cursor.execute("CREATE TABLE blocks_"+db_suffix+"(hash CHAR(64) PRIMARY KEY, block bytea);")
+        cursor.execute("CREATE TABLE blocks_"+db_suffix+"(hash CHAR(64) PRIMARY KEY, block jsonb, time_of_insertion timestamp);")
         g.connectionToDb.commit()
         cursor.execute("DROP TABLE IF EXISTS status_"+db_suffix+";")
         cursor.execute("CREATE TABLE status_"+db_suffix+"(key text, value text);")
         g.connectionToDb.commit()
         genesisBlock = Block.generateGenesisBlock()
-        cursor.execute("INSERT INTO blocks_"+db_suffix+"(hash, block) VALUES (%s, %s);", (genesisBlock.hash, pickle.dumps(genesisBlock)) )
+        cursor.execute("INSERT INTO blocks_"+db_suffix+"(hash, block, time_of_insertion) VALUES (%s, %s, now());", (genesisBlock.hash, genesisBlock.stringify()) )
         g.connectionToDb.commit()
         cursor.close()
         self.storeTopHash(genesisBlock.hash)
@@ -269,7 +269,7 @@ class Blockchain:
             print('Blockchain.getBlock() is returning None for')
             print('hash:', hash)
             return None
-        block = pickle.loads(res[0])
+        block = Block.buildFromJson(res[0])
         cursor.close()
         return block
 
@@ -324,7 +324,7 @@ class Blockchain:
                 block.setHeight( previousBlock.height + 1 )
                 block.setSumOfDifficulty(previousBlock.sumOfDifficulty + len(block.hash)-len((block.hash).lstrip('0')))
                 cursor = get_cursor()
-                cursor.execute("INSERT INTO blocks_"+db_suffix+"(hash, block) VALUES (%s,%s);", (block.hash, pickle.dumps(block)))
+                cursor.execute("INSERT INTO blocks_"+db_suffix+"(hash, block, time_of_insertion) VALUES (%s,%s, now());", (block.hash, block.stringify()))
                 newSumOfDifficulty = self.findSumOfDifficulty(block.hash)
                 newHeight = block.height
                 if(self.getMaxSumOfDifficulty() < newSumOfDifficulty):
@@ -347,14 +347,14 @@ class Blockchain:
         if(reset):
             cursor = get_cursor()
             cursor.execute("DROP TABLE IF EXISTS blocks_"+db_suffix+";")
-            #cursor.execute("CREATE TABLE blocks_"+db_suffix+"(hash text, block bytea);")
-            cursor.execute("CREATE TABLE blocks_"+db_suffix+"(hash CHAR(64) PRIMARY KEY, block bytea);")
+            #cursor.execute("CREATE TABLE blocks_"+db_suffix+"(hash text, block jsonb);")
+            cursor.execute("CREATE TABLE blocks_"+db_suffix+"(hash CHAR(64) PRIMARY KEY, block jsonb, time_of_insertion timestamp);")
             g.connectionToDb.commit()
             cursor.execute("DROP TABLE IF EXISTS status_"+db_suffix+";")
             cursor.execute("CREATE TABLE status_"+db_suffix+"(key text, value text);")
             g.connectionToDb.commit()
             genesisBlock = Block.generateGenesisBlock()
-            cursor.execute("INSERT INTO blocks_"+db_suffix+"(hash, block) VALUES (%s, %s);", (genesisBlock.hash, pickle.dumps(genesisBlock)) )
+            cursor.execute("INSERT INTO blocks_"+db_suffix+"(hash, block, time_of_insertion) VALUES (%s, %s, now());", (genesisBlock.hash, genesisBlock.stringify()) )
             g.connectionToDb.commit()
             cursor.close()
             self.storeTopHash(genesisBlock.hash)
