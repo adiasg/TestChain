@@ -496,6 +496,7 @@ class Block:
         block_json['previousHash'] = self.previousHash
         block_json['height'] = self.height
         block_json['sumOfDifficulty'] = self.sumOfDifficulty
+        block_json['hash'] = self.hash
         return block_json
 
     def stringify(self):

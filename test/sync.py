@@ -45,7 +45,6 @@ class SimpleLaggingTestCase(unittest.TestCase):
         #printBlock(topBlock2)
         self.assertEqual(topBlock1['hash'], topBlock2['hash'])
 
-
 class SimpleLeadingTestCase(unittest.TestCase):
     def setUp(self):
         self.peer1 = peer1
@@ -66,7 +65,7 @@ class SimpleLeadingTestCase(unittest.TestCase):
         generateBlocksResponse1 = test.generateBlocks(self.peer1, '5000', self.data1)
         generateBlocksResponse2 = test.generateBlocks(self.peer2, '5000', self.data2)
 
-        ''''
+        '''
         topBlock1 = test.getTopBlock(self.peer1, '5000')
         topBlock2 = test.getTopBlock(self.peer2, '5000')
         print("topBlock1:")
