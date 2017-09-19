@@ -106,3 +106,4 @@ services:
                ipv4_address: 172.32.0.8
        depends_on:
            - postgres
+

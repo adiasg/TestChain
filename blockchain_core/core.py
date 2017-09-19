@@ -4,9 +4,14 @@ import json
 import pickle
 import psycopg2
 import requests
+import os
 
 def get_cursor():
     return g.connectionToDb.cursor()
+
+db_suffix = ""
+if "db_suffix" in os.environ:
+    db_suffix = os.environ.get('db_suffix')
 
 class Node:
     def __init__(self):
@@ -214,33 +219,32 @@ class Node:
 class Blockchain:
     def __init__(self):
         cursor = get_cursor()
-        cursor.execute("DROP TABLE IF EXISTS blocks;")
-        #cursor.execute("CREATE TABLE blocks(hash text, block bytea);")
-        cursor.execute("CREATE TABLE blocks(hash CHAR(64) PRIMARY KEY, block bytea);")
+        cursor.execute("DROP TABLE IF EXISTS blocks_"+db_suffix+";")
+        cursor.execute("CREATE TABLE blocks_"+db_suffix+"(hash CHAR(64) PRIMARY KEY, block bytea);")
         g.connectionToDb.commit()
-        cursor.execute("DROP TABLE IF EXISTS status;")
-        cursor.execute("CREATE TABLE status(key text, value text);")
+        cursor.execute("DROP TABLE IF EXISTS status_"+db_suffix+";")
+        cursor.execute("CREATE TABLE status_"+db_suffix+"(key text, value text);")
         g.connectionToDb.commit()
         genesisBlock = Block.generateGenesisBlock()
-        cursor.execute("INSERT INTO blocks(hash, block) VALUES (%s, %s);", (genesisBlock.hash, pickle.dumps(genesisBlock)) )
+        cursor.execute("INSERT INTO blocks_"+db_suffix+"(hash, block) VALUES (%s, %s);", (genesisBlock.hash, pickle.dumps(genesisBlock)) )
         g.connectionToDb.commit()
         cursor.close()
         self.storeTopHash(genesisBlock.hash)
 
     def storeTopHash(self, topHash):
         cursor = get_cursor()
-        cursor.execute("SELECT value FROM status WHERE key = %s;", ("topHash", ))
+        cursor.execute("SELECT value FROM status_"+db_suffix+" WHERE key = %s;", ("topHash", ))
         res = cursor.fetchone()
         if(res is None):
-            cursor.execute("INSERT INTO status VALUES (%s, %s);", ("topHash", topHash) )
+            cursor.execute("INSERT INTO status_"+db_suffix+" VALUES (%s, %s);", ("topHash", topHash) )
         else:
-            cursor.execute("UPDATE status SET value = %s WHERE key = %s;", (topHash, "topHash",))
+            cursor.execute("UPDATE status_"+db_suffix+" SET value = %s WHERE key = %s;", (topHash, "topHash",))
         g.connectionToDb.commit()
         cursor.close()
 
     def getTopHash(self):
         cursor = get_cursor()
-        cursor.execute("SELECT value FROM status WHERE key = %s;", ("topHash", ))
+        cursor.execute("SELECT value FROM status_"+db_suffix+" WHERE key = %s;", ("topHash", ))
         res = cursor.fetchone()
         topHash = None
         if(res is not None):
@@ -259,7 +263,7 @@ class Blockchain:
 
     def getBlock(self, hash):
         cursor = get_cursor()
-        cursor.execute( "SELECT block FROM blocks WHERE hash = %s;" , (hash, ) )
+        cursor.execute( "SELECT block FROM blocks_"+db_suffix+" WHERE hash = %s;" , (hash, ) )
         res = cursor.fetchone()
         if(res is None):
             print('Blockchain.getBlock() is returning None for')
@@ -320,7 +324,7 @@ class Blockchain:
                 block.setHeight( previousBlock.height + 1 )
                 block.setSumOfDifficulty(previousBlock.sumOfDifficulty + len(block.hash)-len((block.hash).lstrip('0')))
                 cursor = get_cursor()
-                cursor.execute('INSERT INTO blocks(hash, block) VALUES (%s,%s);', (block.hash, pickle.dumps(block)))
+                cursor.execute("INSERT INTO blocks_"+db_suffix+"(hash, block) VALUES (%s,%s);", (block.hash, pickle.dumps(block)))
                 newSumOfDifficulty = self.findSumOfDifficulty(block.hash)
                 newHeight = block.height
                 if(self.getMaxSumOfDifficulty() < newSumOfDifficulty):
@@ -342,15 +346,15 @@ class Blockchain:
     def generateBlocks(self, numberOfBlocks, prefix, hash, reset=False):
         if(reset):
             cursor = get_cursor()
-            cursor.execute("DROP TABLE IF EXISTS blocks;")
-            #cursor.execute("CREATE TABLE blocks(hash text, block bytea);")
-            cursor.execute("CREATE TABLE blocks(hash CHAR(64) PRIMARY KEY, block bytea);")
+            cursor.execute("DROP TABLE IF EXISTS blocks_"+db_suffix+";")
+            #cursor.execute("CREATE TABLE blocks_"+db_suffix+"(hash text, block bytea);")
+            cursor.execute("CREATE TABLE blocks_"+db_suffix+"(hash CHAR(64) PRIMARY KEY, block bytea);")
             g.connectionToDb.commit()
-            cursor.execute("DROP TABLE IF EXISTS status;")
-            cursor.execute("CREATE TABLE status(key text, value text);")
+            cursor.execute("DROP TABLE IF EXISTS status_"+db_suffix+";")
+            cursor.execute("CREATE TABLE status_"+db_suffix+"(key text, value text);")
             g.connectionToDb.commit()
             genesisBlock = Block.generateGenesisBlock()
-            cursor.execute("INSERT INTO blocks(hash, block) VALUES (%s, %s);", (genesisBlock.hash, pickle.dumps(genesisBlock)) )
+            cursor.execute("INSERT INTO blocks_"+db_suffix+"(hash, block) VALUES (%s, %s);", (genesisBlock.hash, pickle.dumps(genesisBlock)) )
             g.connectionToDb.commit()
             cursor.close()
             self.storeTopHash(genesisBlock.hash)
