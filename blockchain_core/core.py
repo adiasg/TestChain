@@ -17,13 +17,16 @@ class Node:
     def __init__(self):
         self.nodeDeclaration = {'isPeer': True}
         self.blockchain = Blockchain()
-        peerList = [('172.24.0.2', '5000'), ('172.24.0.5', '5000'), ('172.32.0.2', '5000'), ('172.32.0.5', '5000'), ('10.4.7.216', '5000')]
+        peerList = [('172.32.0.4', '5000'), ('172.32.0.5', '5000'), ('172.32.0.6', '5000')]
         cursor = get_cursor()
         cursor.execute("DROP TABLE IF EXISTS peerList;")
         cursor.execute("CREATE TABLE peerList(peerIp cidr, portNo smallint);")
         for peerIp, portNo in peerList:
             print("peerIp, portNo", peerIp, portNo)
             cursor.execute("INSERT INTO peerList VALUES (%s, %s);", (peerIp, portNo))
+        g.connectionToDb.commit()
+        cursor.execute("DROP TABLE IF EXISTS log_block_receive_"+db_suffix+";")
+        cursor.execute("CREATE TABLE log_block_receive_"+db_suffix+"(log_time timestamp PRIMARY KEY, hash CHAR(64), block jsonb);")
         g.connectionToDb.commit()
         cursor.close()
 
@@ -117,11 +120,11 @@ class Node:
         data = {'topHashChain': topHashChain}
         requests.post(url, json=data, timeout=30)
 
-    def propogateBlock(self,block):
+    def propogateBlock(self, block):
         for peerIp in self.getPeerList():
             url = 'http://'+peerIp+':'+str(self.getPeerPortNo(peerIp))+'/block/submit'
             data={'block':block}
-            status = requests.post(url,json=data,timeout=30)
+            status = requests.post(url,json=data,timeout=10)
             print(status)
 
     def receiveSync(self, peerIp, peerTopHash):
@@ -211,10 +214,18 @@ class Node:
         if block is not None and self.blockchain.getBlock(block.hash) is None:
             #block.printBlock()
             print('Trying add block')
-            self.blockchain.addBlock(block)
+            if(self.blockchain.addBlock(block)):
+                print('Logging block add')
+                self.logBlockReceive(block)
             return True
         else:
             return False
+
+    def logBlockReceive(self, block):
+        cursor = get_cursor()
+        cursor.execute("INSERT INTO log_block_receive_"+db_suffix+"(log_time, hash, block) VALUES (now(), %s, %s);", (block.hash, block.stringify()) )
+        g.connectionToDb.commit()
+        cursor.close()
 
 class Blockchain:
     def __init__(self):
@@ -324,11 +335,12 @@ class Blockchain:
             if previousBlock is None:
                 print("\tBlockchain.addBlock():\n\tNo previous block for block with previousHash:", block.previousHash)
                 #print("---------------------------------------------------------------")
-                return
+                return False
             else:
                 #print("Got previous block:")
                 #previousBlock.printBlock()
                 #print("Setting height:", previousBlock.height + 1)
+                returnValue = False
                 block.setHeight( previousBlock.height + 1 )
                 block.setSumOfDifficulty(previousBlock.sumOfDifficulty + len(block.hash)-len((block.hash).lstrip('0')))
                 cursor = get_cursor()
@@ -341,14 +353,17 @@ class Blockchain:
                 if(self.getMaxSumOfDifficulty() < newSumOfDifficulty):
                     #print('Storing topHash:', block.hash)
                     self.storeTopHash(block.hash)
+                    returnValue = True
                 g.connectionToDb.commit()
                 print('Added block:')
                 block.printBlock()
                 #print('Checking added block')
                 #self.getBlock(block.hash).printBlock()
+                return returnValue
         else:
             print('Block not verified')
             block.printBlock()
+            return False
         #print("---------------------------------------------------------------")
 
     def buildTestBlockchain(self, numberOfBlocks):

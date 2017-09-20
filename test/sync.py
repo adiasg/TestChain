@@ -2,8 +2,10 @@ import unittest
 import test
 from test import printBlock
 
-peer1 = '172.32.0.4'
+peer1 = '172.32.0.1'
 peer2 = '172.32.0.5'
+
+verbose = True
 
 class SimpleLaggingTestCase(unittest.TestCase):
     def setUp(self):
@@ -25,24 +27,25 @@ class SimpleLaggingTestCase(unittest.TestCase):
         generateBlocksResponse1 = test.generateBlocks(self.peer1, '5000', self.data1)
         generateBlocksResponse2 = test.generateBlocks(self.peer2, '5000', self.data2)
 
-        '''
-        topBlock1 = test.getTopBlock(self.peer1, '5000')
-        topBlock2 = test.getTopBlock(self.peer2, '5000')
-        print("topBlock1:")
-        printBlock(topBlock1)
-        print("topBlock2:")
-        printBlock(topBlock2)
-        '''
+        if verbose:
+            topBlock1 = test.getTopBlock(self.peer1, '5000')
+            topBlock2 = test.getTopBlock(self.peer2, '5000')
+            print("topBlock1:")
+            printBlock(topBlock1)
+            print("topBlock2:")
+            printBlock(topBlock2)
 
     def test_sync(self):
-        #print("################### Syncing ###################")
+        if verbose:
+            print("############################################### Syncing ###############################################")
         test.initiateSync(self.peer1, '5000', self.peer2)
         topBlock1 = test.getTopBlock(self.peer1, '5000')
         topBlock2 = test.getTopBlock(self.peer2, '5000')
-        #print("topBlock1:")
-        #printBlock(topBlock1)
-        #print("topBlock2:")
-        #printBlock(topBlock2)
+        if verbose:
+            print("topBlock1:")
+            printBlock(topBlock1)
+            print("topBlock2:")
+            printBlock(topBlock2)
         self.assertEqual(topBlock1['hash'], topBlock2['hash'])
 
 class SimpleLeadingTestCase(unittest.TestCase):
@@ -65,24 +68,25 @@ class SimpleLeadingTestCase(unittest.TestCase):
         generateBlocksResponse1 = test.generateBlocks(self.peer1, '5000', self.data1)
         generateBlocksResponse2 = test.generateBlocks(self.peer2, '5000', self.data2)
 
-        '''
-        topBlock1 = test.getTopBlock(self.peer1, '5000')
-        topBlock2 = test.getTopBlock(self.peer2, '5000')
-        print("topBlock1:")
-        printBlock(topBlock1)
-        print("topBlock2:")
-        printBlock(topBlock2)
-        '''
+        if verbose:
+            topBlock1 = test.getTopBlock(self.peer1, '5000')
+            topBlock2 = test.getTopBlock(self.peer2, '5000')
+            print("topBlock1:")
+            printBlock(topBlock1)
+            print("topBlock2:")
+            printBlock(topBlock2)
 
     def test_sync(self):
-        #print("################### Syncing ###################")
+        if verbose:
+            print("############################################### Syncing ###############################################")
         test.initiateSync(self.peer1, '5000', self.peer2)
         topBlock1 = test.getTopBlock(self.peer1, '5000')
         topBlock2 = test.getTopBlock(self.peer2, '5000')
-        #print("topBlock1:")
-        #printBlock(topBlock1)
-        #print("topBlock2:")
-        #printBlock(topBlock2)
+        if verbose:
+            print("topBlock1:")
+            printBlock(topBlock1)
+            print("topBlock2:")
+            printBlock(topBlock2)
         self.assertEqual(topBlock1['hash'], topBlock2['hash'])
 
 class ForkedButLeadingTestCase(unittest.TestCase):
@@ -120,10 +124,25 @@ class ForkedButLeadingTestCase(unittest.TestCase):
         generateBlocksResponse1 = test.generateBlocks(self.peer1, '5000', self.data1)
         generateBlocksResponse2 = test.generateBlocks(self.peer2, '5000', self.data2)
 
+        if verbose:
+            topBlock1 = test.getTopBlock(self.peer1, '5000')
+            topBlock2 = test.getTopBlock(self.peer2, '5000')
+            print("topBlock1:")
+            printBlock(topBlock1)
+            print("topBlock2:")
+            printBlock(topBlock2)
+
     def test_sync(self):
+        if verbose:
+            print("############################################### Syncing ###############################################")
         test.initiateSync(self.peer1, '5000', self.peer2)
         topBlock1 = test.getTopBlock(self.peer1, '5000')
         topBlock2 = test.getTopBlock(self.peer2, '5000')
+        if verbose:
+            print("topBlock1:")
+            printBlock(topBlock1)
+            print("topBlock2:")
+            printBlock(topBlock2)
         self.assertEqual(topBlock1['hash'], topBlock2['hash'])
 
 class ForkedButLaggingTestCase(unittest.TestCase):
@@ -161,10 +180,25 @@ class ForkedButLaggingTestCase(unittest.TestCase):
         generateBlocksResponse1 = test.generateBlocks(self.peer1, '5000', self.data1)
         generateBlocksResponse2 = test.generateBlocks(self.peer2, '5000', self.data2)
 
+        if verbose:
+            topBlock1 = test.getTopBlock(self.peer1, '5000')
+            topBlock2 = test.getTopBlock(self.peer2, '5000')
+            print("topBlock1:")
+            printBlock(topBlock1)
+            print("topBlock2:")
+            printBlock(topBlock2)
+
     def test_sync(self):
+        if verbose:
+            print("############################################### Syncing ###############################################")
         test.initiateSync(self.peer1, '5000', self.peer2)
         topBlock1 = test.getTopBlock(self.peer1, '5000')
         topBlock2 = test.getTopBlock(self.peer2, '5000')
+        if verbose:
+            print("topBlock1:")
+            printBlock(topBlock1)
+            print("topBlock2:")
+            printBlock(topBlock2)
         self.assertEqual(topBlock1['hash'], topBlock2['hash'])
 
 if __name__ == '__main__':
