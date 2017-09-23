@@ -68,11 +68,11 @@ def serve_block():
 
 @app.route('/block/generateBlocks', methods=['POST'])
 def serve_block_generateBlocks():
-    if not request.json or not 'numberOfBlocks' in request.json or not 'prefix' in request.json or not 'hash' in request.json:
+    if not request.json or not 'numberOfBlocks' in request.json or not 'prefix' in request.json or not 'hash' in request.json or not 'difficulty' in request.json:
         abort(400)
     if 'reset' in request.json:
-        return jsonify(node.generateBlocks( int(request.json['numberOfBlocks']), request.json['prefix'], request.json['hash'], request.json['reset'] ))
-    return jsonify(node.generateBlocks(int(request.json['numberOfBlocks']),request.json['prefix'],request.json['hash']))
+        return jsonify(node.generateBlocks( int(request.json['numberOfBlocks']), request.json['prefix'], request.json['hash'], int(request.json['difficulty']), request.json['reset'] ))
+    return jsonify(node.generateBlocks(int(request.json['numberOfBlocks']), request.json['prefix'], int(request.json['difficulty']), request.json['hash']))
 
 @app.route('/block/submit', methods=['POST'])
 def serve_block_submit():

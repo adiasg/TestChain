@@ -61,8 +61,14 @@ class Node:
     def buildTestNode(self, numberOfBlocks):
         self.blockchain.buildTestBlockchain(numberOfBlocks)
 
-    def generateBlocks(self, numberOfBlocks, prefix, hash, reset=False):
-        success_status = self.blockchain.generateBlocks(numberOfBlocks, prefix, hash, reset)
+    def generateBlocks(self, numberOfBlocks, prefix, hash, difficulty, reset=False):
+        if reset==True:
+            cursor = get_cursor()
+            cursor.execute("DROP TABLE IF EXISTS log_block_receive_"+db_suffix+";")
+            cursor.execute("CREATE TABLE log_block_receive_"+db_suffix+"(log_time timestamp PRIMARY KEY, hash CHAR(64), block jsonb);")
+            g.connectionToDb.commit()
+            cursor.close()
+        success_status = self.blockchain.generateBlocks(numberOfBlocks, prefix, hash, difficulty, reset)
         topHash = self.getTopHash()
         if hash == "":
             return {'success': success_status, 'topHash': topHash, 'status': 'generated '+str(numberOfBlocks)+' blocks with prefix: '+prefix}
@@ -162,6 +168,7 @@ class Node:
             print("url:", url)
             status_response = requests.post(url, json=data, timeout=30).json()
             print('\tgot status_response:', status_response)
+            returnValue = {}
             if status_response is not None and 'status' in status_response:
                 status = status_response['status']
                 if(status=='synced'):
@@ -180,7 +187,12 @@ class Node:
                         print('intersectionHash:', intersectionHash)
                         chainToSend = self.blockchain.getTopChainHash( intersectionHash )
                         self.sendTopHashChain(peerIp, chainToSend)
-        return {'status': 'sync complete'}
+                returnValue['reply received'] = status
+            if 'reply received' in returnValue:
+                returnValue['status'] = 'success'
+            else:
+                returnValue['status'] = 'failed'
+        return returnValue
 
     def receiveTopHashChain(self, peerIp, topHashChain):
         print('receiveTopHashChain()')
@@ -217,7 +229,9 @@ class Node:
             if(self.blockchain.addBlock(block)):
                 print('Logging block add')
                 self.logBlockReceive(block)
-            return True
+                return True
+            else:
+                return False
         else:
             return False
 
@@ -340,7 +354,6 @@ class Blockchain:
                 #print("Got previous block:")
                 #previousBlock.printBlock()
                 #print("Setting height:", previousBlock.height + 1)
-                returnValue = False
                 block.setHeight( previousBlock.height + 1 )
                 block.setSumOfDifficulty(previousBlock.sumOfDifficulty + len(block.hash)-len((block.hash).lstrip('0')))
                 cursor = get_cursor()
@@ -353,13 +366,13 @@ class Blockchain:
                 if(self.getMaxSumOfDifficulty() < newSumOfDifficulty):
                     #print('Storing topHash:', block.hash)
                     self.storeTopHash(block.hash)
-                    returnValue = True
                 g.connectionToDb.commit()
+                cursor.close()
                 print('Added block:')
                 block.printBlock()
                 #print('Checking added block')
                 #self.getBlock(block.hash).printBlock()
-                return returnValue
+                return True
         else:
             print('Block not verified')
             block.printBlock()
@@ -373,7 +386,7 @@ class Blockchain:
             self.addBlock(nextBlock)
             topBlock = nextBlock
 
-    def generateBlocks(self, numberOfBlocks, prefix, hash, reset=False):
+    def generateBlocks(self, numberOfBlocks, prefix, hash, difficulty, reset=False):
         if(reset):
             cursor = get_cursor()
             cursor.execute("DROP TABLE IF EXISTS blocks_"+db_suffix+";")
@@ -397,7 +410,10 @@ class Blockchain:
         if topBlock is None:
             return False
         for iter in range(numberOfBlocks):
-            topBlock = Block({"Data": prefix + "Block number " + str(1+topBlock.height)}, topBlock.hash, difficulty=2, mine=True)
+            topBlock = Block(data={"Data": prefix + "Block number " + str(1+topBlock.height)},
+                             previousHash=topBlock.hash,
+                             difficulty=difficulty,
+                             mine=True)
             self.addBlock(topBlock)
         return True
 
