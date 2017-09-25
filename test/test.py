@@ -48,7 +48,7 @@ def randomPeerPair(peers):
 
 def dataGenerateBlock(peer):
     data = {}
-    data['prefix'] = 'TEST-SIMULATE-WEB_'+str( int( peer.split('.')[-1] )-3 )+' '
+    data['prefix'] = 'TEST-SIMULATE-WEB_'+format(int( peer.split('.')[-1] )-3 , '04d')+' '
     data['hash'] = ''
     data['numberOfBlocks'] = 1
     data['difficulty'] = 5#random.randrange(4,6)

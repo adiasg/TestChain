@@ -3,6 +3,8 @@ import pandas
 import psycopg2
 import datetime
 import os
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 def blockDataSeries(block_json):
     ds = pandas.Series()
@@ -39,7 +41,7 @@ def analyze(number_of_peers, lambda_sync, lambda_generate, simulation_time):
     blocksDF = pandas.DataFrame()
     peer_noOfBlocks = {}
     for peer_id in range(1,number_of_peers+1):
-        df = pandas.read_sql( "select hash, time_of_insertion, block->'previoushash' as previoushash from blocks_web"+str(peer_id)+";", connectionToDb )
+        df = pandas.read_sql( "select hash, time_of_insertion, block->'previousHash' as previoushash from blocks_web"+str(peer_id)+";", connectionToDb )
         df['peer_id'] = peer_id
         peer_noOfBlocks['web'+str(peer_id)] = len(df)
         #print(df.head())
@@ -72,7 +74,7 @@ def analyze(number_of_peers, lambda_sync, lambda_generate, simulation_time):
     logReceiveDF = logReceiveDF.sort_values(by=['log_time'])
     print("---------------------- logReceiveDF ----------------------")
     print(logReceiveDF.columns)
-    print(logReceiveDF)
+    #print(logReceiveDF)
     print("\n")
 
     longestChainDF = pandas.DataFrame()
@@ -104,10 +106,12 @@ def analyze(number_of_peers, lambda_sync, lambda_generate, simulation_time):
             #print("Latency:", (last_add_time-generate_time).total_seconds() )
             blocksDF.loc[ (blocksDF['time_of_insertion']==generate_time)&(blocksDF['hash']==last_common_hash['hash']), 'latency' ] = (last_add_time-generate_time).total_seconds()
         queries = [ longestChainDF.query("peer_id=="+str(peer_id)+" and previoushash=='"+current_hashes[peer_id-1]+"'") for peer_id in range(1,number_of_peers+1) ]
+    '''
     print("Last Common Block:")
     print("\tHash:", last_common_hash['hash'])
     print("\tHeight:", last_common_hash['height'])
     print("\n")
+    '''
 
     #longestChainDF['latency'] = None
     longestChainDF['agreeing_peers'] = 0
