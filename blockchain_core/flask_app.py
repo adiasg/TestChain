@@ -122,7 +122,7 @@ if __name__ == '__main__':
     with app.app_context():
         connect_db()
         node = Node()
-        node.buildTestNode(12)
+        #node.buildTestNode(12)
         g.connectionToDb.close()
     if(len(sys.argv)>1 and sys.argv[1]=='debug'):
         app.run(debug=True, port=5000)

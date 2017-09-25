@@ -17,7 +17,7 @@ class Node:
     def __init__(self):
         self.nodeDeclaration = {'isPeer': True}
         self.blockchain = Blockchain()
-        peerList = [('172.32.0.4', '5000'), ('172.32.0.5', '5000'), ('172.32.0.6', '5000')]
+        peerList = [ ( '172.32.0.'+str(4+x), '5000' ) for x in range(50) ]
         cursor = get_cursor()
         cursor.execute("DROP TABLE IF EXISTS peerList;")
         cursor.execute("CREATE TABLE peerList(peerIp cidr, portNo smallint);")
@@ -250,8 +250,12 @@ class Blockchain:
         cursor.execute("DROP TABLE IF EXISTS status_"+db_suffix+";")
         cursor.execute("CREATE TABLE status_"+db_suffix+"(key text, value text);")
         g.connectionToDb.commit()
+        cursor.execute("DROP TABLE IF EXISTS log_block_generate_"+db_suffix+";")
+        cursor.execute("CREATE TABLE log_block_generate_"+db_suffix+"(log_time timestamp PRIMARY KEY, hash CHAR(64), block jsonb);")
+        g.connectionToDb.commit()
         genesisBlock = Block.generateGenesisBlock()
         cursor.execute("INSERT INTO blocks_"+db_suffix+"(hash, block, time_of_insertion) VALUES (%s, %s, now());", (genesisBlock.hash, genesisBlock.stringify()) )
+        self.logBlockGenerate(genesisBlock)
         g.connectionToDb.commit()
         cursor.close()
         self.storeTopHash(genesisBlock.hash)
@@ -386,6 +390,12 @@ class Blockchain:
             self.addBlock(nextBlock)
             topBlock = nextBlock
 
+    def logBlockGenerate(self, block):
+        cursor = get_cursor()
+        cursor.execute("INSERT INTO log_block_generate_"+db_suffix+"(log_time, hash, block) VALUES (now(), %s, %s);", (block.hash, block.stringify()) )
+        g.connectionToDb.commit()
+        cursor.close()
+
     def generateBlocks(self, numberOfBlocks, prefix, hash, difficulty, reset=False):
         if(reset):
             cursor = get_cursor()
@@ -396,8 +406,12 @@ class Blockchain:
             cursor.execute("DROP TABLE IF EXISTS status_"+db_suffix+";")
             cursor.execute("CREATE TABLE status_"+db_suffix+"(key text, value text);")
             g.connectionToDb.commit()
+            cursor.execute("DROP TABLE IF EXISTS log_block_generate_"+db_suffix+";")
+            cursor.execute("CREATE TABLE log_block_generate_"+db_suffix+"(log_time timestamp PRIMARY KEY, hash CHAR(64), block jsonb);")
+            g.connectionToDb.commit()
             genesisBlock = Block.generateGenesisBlock()
             cursor.execute("INSERT INTO blocks_"+db_suffix+"(hash, block, time_of_insertion) VALUES (%s, %s, now());", (genesisBlock.hash, genesisBlock.stringify()) )
+            self.logBlockGenerate(genesisBlock)
             g.connectionToDb.commit()
             cursor.close()
             self.storeTopHash(genesisBlock.hash)
@@ -414,7 +428,9 @@ class Blockchain:
                              previousHash=topBlock.hash,
                              difficulty=difficulty,
                              mine=True)
-            self.addBlock(topBlock)
+            if self.getBlock(hash) is None:
+                self.addBlock(topBlock)
+                self.logBlockGenerate(topBlock)
         return True
 
     def getTopChainNumber(self, number_of_hashes_to_send):

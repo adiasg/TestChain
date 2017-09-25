@@ -74,3 +74,115 @@ services:
                ipv4_address: 172.32.0.6
        depends_on:
            - postgres
+
+
+   web4:
+       environment:
+           - db_suffix=web4
+#           - postgres_host=postgres
+       restart: always
+       build: ./blockchain_core
+       ports:
+           - "5000"
+       command: python flask_app.py
+       networks:
+           testchain_net:
+               ipv4_address: 172.32.0.7
+       depends_on:
+           - postgres
+
+
+   web5:
+       environment:
+           - db_suffix=web5
+#           - postgres_host=postgres
+       restart: always
+       build: ./blockchain_core
+       ports:
+           - "5000"
+       command: python flask_app.py
+       networks:
+           testchain_net:
+               ipv4_address: 172.32.0.8
+       depends_on:
+           - postgres
+
+
+   web6:
+       environment:
+           - db_suffix=web6
+#           - postgres_host=postgres
+       restart: always
+       build: ./blockchain_core
+       ports:
+           - "5000"
+       command: python flask_app.py
+       networks:
+           testchain_net:
+               ipv4_address: 172.32.0.9
+       depends_on:
+           - postgres
+
+
+   web7:
+       environment:
+           - db_suffix=web7
+#           - postgres_host=postgres
+       restart: always
+       build: ./blockchain_core
+       ports:
+           - "5000"
+       command: python flask_app.py
+       networks:
+           testchain_net:
+               ipv4_address: 172.32.0.10
+       depends_on:
+           - postgres
+
+
+   web8:
+       environment:
+           - db_suffix=web8
+#           - postgres_host=postgres
+       restart: always
+       build: ./blockchain_core
+       ports:
+           - "5000"
+       command: python flask_app.py
+       networks:
+           testchain_net:
+               ipv4_address: 172.32.0.11
+       depends_on:
+           - postgres
+
+
+   web9:
+       environment:
+           - db_suffix=web9
+#           - postgres_host=postgres
+       restart: always
+       build: ./blockchain_core
+       ports:
+           - "5000"
+       command: python flask_app.py
+       networks:
+           testchain_net:
+               ipv4_address: 172.32.0.12
+       depends_on:
+           - postgres
+
+
+   web10:
+       environment:
+           - db_suffix=web10
+#           - postgres_host=postgres
+       restart: always
+       build: ./blockchain_core
+       ports:
+           - "5000"
+       command: python flask_app.py
+       networks:
+           testchain_net:
+               ipv4_address: 172.32.0.13
+       depends_on:
+           - postgres
