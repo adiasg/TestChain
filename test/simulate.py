@@ -22,8 +22,10 @@ if __name__ == '__main__':
         simulation_time = number_of_peers*100
         """
         number_of_peers = int(sys.argv[1])
-        lambda_sync = number_of_peers*(1.0/float(sys.argv[2]))
-        lambda_generate = 1.0/float(sys.argv[3])
+        #lambda_sync = number_of_peers * 1.0/float(sys.argv[2])
+        #lambda_generate = 1.0/( float(sys.argv[3]) )
+        lambda_sync = 1.0/( 0.1*float(sys.argv[2]) )
+        lambda_generate = 1.0/( 0.1*float(sys.argv[3]) )
         simulation_time = float(sys.argv[4])
 
         peers = [ '172.32.0.'+str(4+x) for x in range(number_of_peers) ]

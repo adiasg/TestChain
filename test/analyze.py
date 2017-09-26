@@ -36,17 +36,20 @@ def analyze(number_of_peers, lambda_sync, lambda_generate, simulation_time):
     connectionToDb = psycopg2.connect(connect_str)
 
     testParameters = {'number_of_peers': number_of_peers, 'lambda_sync': lambda_sync, 'lambda_generate': lambda_generate, 'simulation_time': simulation_time}
+    print(testParameters)
     testParametersDF = pandas.DataFrame([testParameters])
 
     blocksDF = pandas.DataFrame()
     peer_noOfBlocks = {}
     for peer_id in range(1,number_of_peers+1):
-        df = pandas.read_sql( "select hash, time_of_insertion, block->'previousHash' as previoushash from blocks_web"+str(peer_id)+";", connectionToDb )
+        df = pandas.read_sql( "select hash, time_of_insertion, block->'previousHash' as previoushash, block->'height' as height, block->'sumOfDifficulty' as sumofdifficulty from blocks_web"+str(peer_id)+";", connectionToDb )
         df['peer_id'] = peer_id
         peer_noOfBlocks['web'+str(peer_id)] = len(df)
         #print(df.head())
         blocksDF = blocksDF.append(df, ignore_index=True, verify_integrity=True)
     blocksDF = blocksDF.sort_values(by=['time_of_insertion'])
+    start_time = blocksDF.iloc[0]['time_of_insertion']
+    blocksDF['time_of_insertion'] = blocksDF.apply(lambda row: (row['time_of_insertion']-start_time).total_seconds(), axis=1)
     print("---------------------- blocksDF ----------------------")
     print(blocksDF.columns)
     #print(blocksDF)
@@ -60,6 +63,7 @@ def analyze(number_of_peers, lambda_sync, lambda_generate, simulation_time):
         #print(df.head())
         logGenerateDF = logGenerateDF.append(df, ignore_index=True, verify_integrity=True)
     logGenerateDF = logGenerateDF.sort_values(by=['log_time'])
+    logGenerateDF['time_of_insertion'] = logGenerateDF.apply(lambda row: (row['log_time']-start_time).total_seconds(), axis=1)
     print("---------------------- logGenerateDF ----------------------")
     print(logGenerateDF.columns)
     #print(logGenerateDF)
@@ -72,6 +76,7 @@ def analyze(number_of_peers, lambda_sync, lambda_generate, simulation_time):
         #print(df.head())
         logReceiveDF = logReceiveDF.append(df, ignore_index=True, verify_integrity=True)
     logReceiveDF = logReceiveDF.sort_values(by=['log_time'])
+    logReceiveDF['time_of_insertion'] = logReceiveDF.apply(lambda row: (row['log_time']-start_time).total_seconds(), axis=1)
     print("---------------------- logReceiveDF ----------------------")
     print(logReceiveDF.columns)
     #print(logReceiveDF)
@@ -104,7 +109,7 @@ def analyze(number_of_peers, lambda_sync, lambda_generate, simulation_time):
             #print("Min:", generate_time)
             #print("Max:", last_add_time)
             #print("Latency:", (last_add_time-generate_time).total_seconds() )
-            blocksDF.loc[ (blocksDF['time_of_insertion']==generate_time)&(blocksDF['hash']==last_common_hash['hash']), 'latency' ] = (last_add_time-generate_time).total_seconds()
+            blocksDF.loc[ (blocksDF['time_of_insertion']==generate_time)&(blocksDF['hash']==last_common_hash['hash']), 'latency' ] = last_add_time-generate_time
         queries = [ longestChainDF.query("peer_id=="+str(peer_id)+" and previoushash=='"+current_hashes[peer_id-1]+"'") for peer_id in range(1,number_of_peers+1) ]
     '''
     print("Last Common Block:")
@@ -140,6 +145,13 @@ def analyze(number_of_peers, lambda_sync, lambda_generate, simulation_time):
     #print(longestChainDF)
     print(peer_longestChainSize)
     print("\n")
+    #print(longestChainDF.iloc[3])
+    #print(type(longestChainDF.iloc[3]['height']))
+    #print(type(longestChainDF.iloc[3]['peer_id']))
+    #print(type(longestChainDF.iloc[3]['percent_acceptance']))
+    #print(type(longestChainDF.iloc[3]['agreeing_peers']))
+    #print(type(longestChainDF.iloc[3]['hash']))
+    print("\n")
 
     networkLongestChainDF = blocksDF[ blocksDF['latency']>0 ]
     start_time = networkLongestChainDF.iloc[0]['time_of_insertion']
@@ -149,11 +161,14 @@ def analyze(number_of_peers, lambda_sync, lambda_generate, simulation_time):
 
     testResults = {}
     print("Performance Metrics:")
-    testResults['last_add_time'] = (last_added_block['time_of_insertion']-start_time).total_seconds()+last_added_block['latency']
+    testResults['last_add_time'] = (last_added_block['time_of_insertion']-start_time)+last_added_block['latency']
     print( "\tLast add time: {0}".format( testResults['last_add_time'] ))
     testResults['longest_100%_agreed_chain'] = len(networkLongestChainDF.iloc[1:])
     print( "\tLongest agreed chain length: {0}".format( testResults['longest_100%_agreed_chain'] ))
-    testResults['latency'] = sum(networkLongestChainDF.iloc[1:]['latency'])/len(networkLongestChainDF.iloc[1:])
+    if len(networkLongestChainDF.iloc[1:]) > 0:
+        testResults['latency'] = sum(networkLongestChainDF.iloc[1:]['latency'])/len(networkLongestChainDF.iloc[1:])
+    else:
+        testResults['latency'] = None
     print( "\tAverage Latency: {0} seconds per block".format( testResults['latency'] ))
     testResults['throughput'] = len(networkLongestChainDF.iloc[1:])/simulation_time
     print( "\tThroughput: {0} blocks per second".format( testResults['throughput'] ))
@@ -179,6 +194,7 @@ def analyze(number_of_peers, lambda_sync, lambda_generate, simulation_time):
     networkLongestChainDF.to_csv(working_dir+'networkLongestChainDF.csv')
     testParametersDF.to_csv(working_dir+'testParametersDF.csv')
     testResultsDF.to_csv(working_dir+'testResultsDF.csv')
-
+"""
 if __name__ == '__main__':
     analyze(10, 8, 10, 600)
+"""
