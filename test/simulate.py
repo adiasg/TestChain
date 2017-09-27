@@ -3,6 +3,7 @@ from test import printBlock, printTopBlocks, resetPeers, randomPeerPair, dataGen
 from analyze import analyze
 import asyncio
 import sys
+import time
 
 if __name__ == '__main__':
     if len(sys.argv) != 5:
@@ -28,6 +29,7 @@ if __name__ == '__main__':
 
         peers = [ '172.32.0.'+str(4+x) for x in range(number_of_peers) ]
 
+        time.sleep(60)
         resetPeers(peers)
 
         loop = asyncio.get_event_loop()

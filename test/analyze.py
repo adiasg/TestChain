@@ -155,7 +155,7 @@ def analyze(number_of_peers, lambda_sync, lambda_generate, simulation_time):
     print("\n")
 
     networkLongestChainDF = blocksDF[ blocksDF['latency']>0 ]
-    start_time = blocksDF.query("height==0").iloc[-1]['time_of_insertion']
+    start_time = blocksDF.query("height==0").sort_values(by=['time_of_insertion']).iloc[-1]['time_of_insertion']
     #start_time = networkLongestChainDF.iloc[0]['time_of_insertion']
     last_added_block = networkLongestChainDF.iloc[-1]
     num_orphaned_blocks = len(blocksDF.hash.unique())- len(networkLongestChainDF.hash.unique())
