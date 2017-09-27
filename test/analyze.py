@@ -48,8 +48,9 @@ def analyze(number_of_peers, lambda_sync, lambda_generate, simulation_time):
         #print(df.head())
         blocksDF = blocksDF.append(df, ignore_index=True, verify_integrity=True)
     blocksDF = blocksDF.sort_values(by=['time_of_insertion'])
-    start_time = blocksDF.iloc[0]['time_of_insertion']
+    start_time = blocksDF.query("height==0").iloc[-1]['time_of_insertion']
     blocksDF['time_of_insertion'] = blocksDF.apply(lambda row: (row['time_of_insertion']-start_time).total_seconds(), axis=1)
+    blocksDF = blocksDF.query("time_of_insertion<"+str(simulation_time))
     print("---------------------- blocksDF ----------------------")
     print(blocksDF.columns)
     #print(blocksDF)
@@ -154,7 +155,7 @@ def analyze(number_of_peers, lambda_sync, lambda_generate, simulation_time):
     print("\n")
 
     networkLongestChainDF = blocksDF[ blocksDF['latency']>0 ]
-    start_time = networkLongestChainDF.iloc[0]['time_of_insertion']
+    #start_time = networkLongestChainDF.iloc[0]['time_of_insertion']
     last_added_block = networkLongestChainDF.iloc[-1]
     num_orphaned_blocks = len(blocksDF.hash.unique())- len(networkLongestChainDF.hash.unique())
     #print("Total Time:", (last_added_block['time_of_insertion']-start_time).total_seconds()+last_added_block['latency'])

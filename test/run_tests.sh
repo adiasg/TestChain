@@ -2,13 +2,14 @@ PROG="simulate.py"
 
 number_of_peers=(10 15 20)
 simulation_time=600
-# inter_* times are multiplied by 0.1
-inter_gen_time=(25 50)
-inter_sync_time=(2 3 6)
+lambda_sync=('0.4' '0.6')
+lambda_gen=('0.2' '0.4')
 
-for gen in ${inter_gen_time[@]}; do
-    for sync in ${inter_sync_time[@]}; do
-        echo "python3 $PROG $number_of_peers $sync $gen $simulation_time"
-        python3 $PROG $number_of_peers $sync $gen $simulation_time
+for peer in ${number_of_peers[@]}; do
+    for gen in ${lambda_gen[@]}; do
+        for sync in ${lambda_sync[@]}; do
+            echo "python3 $PROG $peer $sync $gen $simulation_time"
+            python3 $PROG $peer $sync $gen $simulation_time
+        done
     done
 done
