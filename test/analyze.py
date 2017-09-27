@@ -155,6 +155,7 @@ def analyze(number_of_peers, lambda_sync, lambda_generate, simulation_time):
     print("\n")
 
     networkLongestChainDF = blocksDF[ blocksDF['latency']>0 ]
+    start_time = blocksDF.query("height==0").iloc[-1]['time_of_insertion']
     #start_time = networkLongestChainDF.iloc[0]['time_of_insertion']
     last_added_block = networkLongestChainDF.iloc[-1]
     num_orphaned_blocks = len(blocksDF.hash.unique())- len(networkLongestChainDF.hash.unique())
@@ -162,6 +163,9 @@ def analyze(number_of_peers, lambda_sync, lambda_generate, simulation_time):
 
     testResults = {}
     print("Performance Metrics:")
+    print(type(last_added_block['time_of_insertion']))
+    print(type(start_time))
+    print(type(last_added_block['latency']))
     testResults['last_add_time'] = (last_added_block['time_of_insertion']-start_time)+last_added_block['latency']
     print( "\tLast add time: {0}".format( testResults['last_add_time'] ))
     testResults['longest_100%_agreed_chain'] = len(networkLongestChainDF.iloc[1:])
@@ -195,7 +199,6 @@ def analyze(number_of_peers, lambda_sync, lambda_generate, simulation_time):
     networkLongestChainDF.to_csv(working_dir+'networkLongestChainDF.csv')
     testParametersDF.to_csv(working_dir+'testParametersDF.csv')
     testResultsDF.to_csv(working_dir+'testResultsDF.csv')
-"""
+
 if __name__ == '__main__':
-    analyze(10, 8, 10, 600)
-"""
+    analyze(20, 0.6, 0.4, 600)

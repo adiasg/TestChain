@@ -80,7 +80,7 @@ def analyzeCsv():
     b.tick_params(labelsize=15)
     b.set_xticklabels(b.get_xticklabels(), rotation=90)
     b.set_xticklabels( map( int, map(float, [ tick_item.get_text() for tick_item in b.get_xticklabels() ] ) ) )
-    sns.plt.show()
+    plt.show()
 
     blocksDF.to_csv(working_dir+'blocksDF.csv')
     #logGenerateDF.to_csv(working_dir+'logGenerateDF.csv')
