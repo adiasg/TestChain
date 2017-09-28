@@ -42,7 +42,7 @@ def analyze(number_of_peers, lambda_sync, lambda_generate, simulation_time):
     blocksDF = pandas.DataFrame()
     peer_noOfBlocks = {}
     for peer_id in range(1,number_of_peers+1):
-        df = pandas.read_sql( "select hash, time_of_insertion, block->'previousHash' as previoushash, block->'height' as height, block->'sumOfDifficulty' as sumofdifficulty from blocks_web"+str(peer_id)+";", connectionToDb )
+        df = pandas.read_sql( "select hash, time_of_insertion, block->'previousHash' as previoushash, block->'height' as height, block->'sumOfDifficulty' as sumofdifficulty, block->'nonce' as nonce, block->'difficulty' as difficulty, block->'data' as data from blocks_web"+str(peer_id)+";", connectionToDb )
         df['peer_id'] = peer_id
         peer_noOfBlocks['web'+str(peer_id)] = len(df)
         #print(df.head())
