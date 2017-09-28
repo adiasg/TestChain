@@ -6,24 +6,16 @@ import pandas
 analyticsDF = pandas.DataFrame()
 
 for working_dir in os.listdir('data/'):
-    #working_dir = os.listdir('data/')[0]
     working_dir = 'data/'+working_dir+'/'
-    #print(working_dir)
-    testParametersDF = pandas.read_csv(working_dir+'testParametersDF.csv', index_col=0)
-    #print(testParametersDF)
-    #print("---------------------------------------------------------------------")
-    testResultsDF = pandas.read_csv(working_dir+'testResultsDF.csv', index_col=0)
-    #print(testResultsDF)
-    #print("---------------------------------------------------------------------")
-
-    #print(pandas.concat([testParametersDF,testResultsDF], axis=1))
-    #print("---------------------------------------------------------------------")
-
-    analyticsDF = analyticsDF.append(pandas.concat([testResultsDF,testParametersDF], axis=1), ignore_index=True)
-    #print(analyticsDF)
-    #print("---------------------------------------------------------------------")
+    try:
+        testParametersDF = pandas.read_csv(working_dir+'testParametersDF.csv', index_col=0)
+        testResultsDF = pandas.read_csv(working_dir+'testResultsDF.csv', index_col=0)
+        testParametersDF['working_dir'] = working_dir
+        analyticsDF = analyticsDF.append(pandas.concat([testResultsDF,testParametersDF], axis=1), ignore_index=True)
+    except OSError:
+        print("OSError for directory:", working_dir)
 
 print(analyticsDF.columns)
-analyticsDF = analyticsDF.sort_values(by=['number_of_peers', 'lambda_generate', 'lambda_sync'])
+analyticsDF = analyticsDF.sort_values(by=['simulation_time', 'number_of_peers', 'lambda_generate', 'lambda_sync'])
 print(analyticsDF[['number_of_peers','lambda_generate','lambda_sync','longest_100%_agreed_chain']])
 print("---------------------------------------------------------------------")
