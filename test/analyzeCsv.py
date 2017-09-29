@@ -82,13 +82,13 @@ def analyzeCsv():
     b.set_xticklabels( map( int, map(float, [ tick_item.get_text() for tick_item in b.get_xticklabels() ] ) ) )
     plt.show()
 
-    blocksDF.to_csv(working_dir+'blocksDF.csv')
+    #blocksDF.to_csv(working_dir+'blocksDF.csv')
     #logGenerateDF.to_csv(working_dir+'logGenerateDF.csv')
     #logReceiveDF.to_csv(working_dir+'logReceiveDF.csv')
     #longestChainDF.to_csv(working_dir+'longestChainDF.csv')
-    networkLongestChainDF.to_csv(working_dir+'networkLongestChainDF.csv')
+    #networkLongestChainDF.to_csv(working_dir+'networkLongestChainDF.csv')
     #testParametersDF.to_csv(working_dir+'testParametersDF.csv')
-    testResultsDF.to_csv(working_dir+'testResultsDF.csv')
+    #testResultsDF.to_csv(working_dir+'testResultsDF.csv')
 
 if __name__ == '__main__':
     analyzeCsv()
