@@ -21,7 +21,7 @@ def analyzeCsv():
     number_of_peers = testParametersDF.iloc[0]['number_of_peers']
     lambda_sync = testParametersDF.iloc[0]['lambda_sync']
     lambda_generate = testParametersDF.iloc[0]['lambda_generate']
-    simulation_time = testParametersDF.iloc[0]['simulation_time']
+    simulation_time = int(testParametersDF.iloc[0]['simulation_time'])
 
     print("number_of_peers:", number_of_peers)
     print("lambda_sync:", lambda_sync)

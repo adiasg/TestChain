@@ -4,9 +4,9 @@ import pandas
 #print(os.listdir('data/'))
 
 analyticsDF = pandas.DataFrame()
-
-for working_dir in os.listdir('data/'):
-    working_dir = 'data/'+working_dir+'/'
+data_dir = '../data/'
+for working_dir in os.listdir(data_dir):
+    working_dir = data_dir+working_dir+'/'
     try:
         testParametersDF = pandas.read_csv(working_dir+'testParametersDF.csv', index_col=0)
         testResultsDF = pandas.read_csv(working_dir+'testResultsDF.csv', index_col=0)
