@@ -25,7 +25,18 @@ print(analyticsDF.columns)
 
 analyticsDF_600 = analyticsDF[analyticsDF['simulation_time']==600]
 analyticsDF_600['normalized_lambda_sync'] = analyticsDF_600.apply(lambda row: round(row['lambda_sync']/row['number_of_peers'],2), axis=1)
+
 query = analyticsDF_600[ ( analyticsDF_600['normalized_lambda_sync'].isin([0.02,0.04,0.06]) ) & ( analyticsDF_600['lambda_generate'].isin([0.2,0.4,0.6]) ) ]
 g = sns.FacetGrid(query[['number_of_peers','lambda_generate','normalized_lambda_sync','atleast_50%_agreed_chain','longest_100%_agreed_chain']], col="lambda_generate", row="normalized_lambda_sync")
 g.map(sns.barplot, "number_of_peers", "atleast_50%_agreed_chain")
+plt.show()
+
+query = analyticsDF_600[ ( analyticsDF_600['normalized_lambda_sync'].isin([0.02,0.04,0.06]) ) & ( analyticsDF_600['lambda_generate'].isin([0.2,0.4,0.6]) ) ]
+g = sns.FacetGrid(query[['number_of_peers','lambda_generate','normalized_lambda_sync','atleast_50%_agreed_chain','longest_100%_agreed_chain']], col="lambda_generate", row="normalized_lambda_sync")
+g.map(sns.barplot, "number_of_peers", "longest_100%_agreed_chain")
+plt.show()
+
+query = analyticsDF_600[ ( analyticsDF_600['normalized_lambda_sync'].isin([0.02,0.04,0.06]) ) & ( analyticsDF_600['lambda_generate'].isin([0.2,0.4,0.6]) ) ]
+g = sns.FacetGrid(query[['number_of_peers','lambda_generate','normalized_lambda_sync','orphaned_blocks']], col="lambda_generate", row="normalized_lambda_sync")
+g.map(sns.barplot, "number_of_peers", "orphaned_blocks")
 plt.show()
