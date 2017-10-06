@@ -1,7 +1,7 @@
 # Script for plotting 'atleast_50%_agreed_chain' vs 'number_of_peers'
-# with varying 'normalized_lambda_sync' and 'lambda_generate' and constant time
+# with varying 'n_l_sync' and 'l_gen' and constant time
 
-# 'normalized_lambda_sync' = 'lambda_sync'/'number_of_peers'
+# 'n_l_sync' = 'lambda_sync'/'number_of_peers'
 
 import os
 import pandas
@@ -20,23 +20,31 @@ for working_dir in os.listdir(data_dir):
     except OSError:
         print("OSError for directory:", working_dir)
 
+analyticsDF['n_l_sync'] = analyticsDF.apply(lambda row: round(row['lambda_sync']/row['number_of_peers'],2), axis=1)
 analyticsDF = analyticsDF.sort_values(by=['simulation_time', 'number_of_peers', 'lambda_generate', 'lambda_sync'])
+analyticsDF['l_gen'] = analyticsDF['lambda_generate']
+analyticsDF['0.5-chain'] = analyticsDF['atleast_50%_agreed_chain']
 print(analyticsDF.columns)
 
 analyticsDF_600 = analyticsDF[analyticsDF['simulation_time']==600]
-analyticsDF_600['normalized_lambda_sync'] = analyticsDF_600.apply(lambda row: round(row['lambda_sync']/row['number_of_peers'],2), axis=1)
-
-query = analyticsDF_600[ ( analyticsDF_600['normalized_lambda_sync'].isin([0.02,0.04,0.06]) ) & ( analyticsDF_600['lambda_generate'].isin([0.2,0.4,0.6]) ) ]
-g = sns.FacetGrid(query[['number_of_peers','lambda_generate','normalized_lambda_sync','atleast_50%_agreed_chain','longest_100%_agreed_chain']], col="lambda_generate", row="normalized_lambda_sync")
-g.map(sns.barplot, "number_of_peers", "atleast_50%_agreed_chain")
+'''
+query = analyticsDF_600[ ( analyticsDF_600['n_l_sync'].isin([0.02,0.04,0.06]) ) & ( analyticsDF_600['l_gen'].isin([0.2,0.4,0.6]) ) ]
+g = sns.FacetGrid(query[['number_of_peers','l_gen','n_l_sync','0.5-chain','longest_100%_agreed_chain']], col="l_gen", row="n_l_sync")
+g.map(sns.pointplot, "number_of_peers", "0.5-chain")
 plt.show()
+img_name = 'all_linear_50.png'
+g.savefig('plots/analyze_nls_n/'+img_name, dpi=400)
 
-query = analyticsDF_600[ ( analyticsDF_600['normalized_lambda_sync'].isin([0.02,0.04,0.06]) ) & ( analyticsDF_600['lambda_generate'].isin([0.2,0.4,0.6]) ) ]
-g = sns.FacetGrid(query[['number_of_peers','lambda_generate','normalized_lambda_sync','atleast_50%_agreed_chain','longest_100%_agreed_chain']], col="lambda_generate", row="normalized_lambda_sync")
+query = analyticsDF_600[ ( analyticsDF_600['n_l_sync'].isin([0.02,0.04,0.06]) ) & ( analyticsDF_600['l_gen'].isin([0.2,0.4,0.6]) ) ]
+g = sns.FacetGrid(query[['number_of_peers','l_gen','n_l_sync','0.5-chain','longest_100%_agreed_chain']], col="l_gen", row="n_l_sync")
 g.map(sns.barplot, "number_of_peers", "longest_100%_agreed_chain")
 plt.show()
-
-query = analyticsDF_600[ ( analyticsDF_600['normalized_lambda_sync'].isin([0.02,0.04,0.06]) ) & ( analyticsDF_600['lambda_generate'].isin([0.2,0.4,0.6]) ) ]
-g = sns.FacetGrid(query[['number_of_peers','lambda_generate','normalized_lambda_sync','orphaned_blocks']], col="lambda_generate", row="normalized_lambda_sync")
+img_name = 'all_linear_100.png'
+g.savefig('plots/analyze_nls_n/'+img_name, dpi=400)
+'''
+query = analyticsDF_600[ ( analyticsDF_600['n_l_sync'].isin([0.02,0.04,0.06]) ) & ( analyticsDF_600['l_gen'].isin([0.2,0.4,0.6]) ) ]
+g = sns.FacetGrid(query[['number_of_peers','l_gen','n_l_sync','orphaned_blocks']], col="l_gen", row="n_l_sync")
 g.map(sns.barplot, "number_of_peers", "orphaned_blocks")
 plt.show()
+#img_name = 'all_linear_orphan.png'
+#g.savefig('plots/analyze_nls_n/'+img_name, dpi=400)

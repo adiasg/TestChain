@@ -9,7 +9,7 @@ for working_dir in os.listdir(data_folder):
         longestChainDF = pandas.read_csv(data_folder+working_dir+'/'+'longestChainDF.csv', index_col=0)
         #number_of_peers = testParametersDF.iloc[0]['number_of_peers']
         #longestChainDF = longestChainDF.sort_values(by=['percent_acceptance'])
-        longestChainDF = longestChainDF[longestChainDF['percent_acceptance']>=50]
+        longestChainDF = longestChainDF[longestChainDF['percent_acceptance']>50]
         longestChainDF = longestChainDF.sort_values(by=['height'])
         print(longestChainDF.iloc[-1]['percent_acceptance'], longestChainDF.iloc[-1]['height'])
         testResultsDF['atleast_50%_agreed_chain'] = longestChainDF.iloc[-1]['height']
