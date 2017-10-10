@@ -20,15 +20,15 @@ for working_dir in os.listdir(data_dir):
 analyticsDF['0.5-chain'] = analyticsDF['atleast_50%_agreed_chain']
 
 query_n2 = analyticsDF[(analyticsDF['lambda_sync']/(analyticsDF['number_of_peers']*(analyticsDF['number_of_peers']-1))).round(3).isin([0.002,0.004,0.007]) & (analyticsDF['lambda_generate'].isin([0.2,0.4,0.6]))]
-query_n2['n2'] = True
+query_n2['dependence'] = 'n'
 query_n2['normalized_lambda_sync'] = query_n2.apply(lambda row: round((row['lambda_sync']/(row['number_of_peers']*(row['number_of_peers']-1))), 3) , axis=1)
 
 query_n_logn = analyticsDF[(analyticsDF['lambda_sync']/(analyticsDF['number_of_peers']*numpy.log2(analyticsDF['number_of_peers']))).round(3).isin([0.006,0.012,0.018]) & (analyticsDF['lambda_generate'].isin([0.2,0.4,0.6]))]
-query_n_logn['n_logn'] = True
+query_n_logn['dependence'] = 'n_logn'
 query_n_logn['normalized_lambda_sync'] = query_n_logn.apply(lambda row: round(row['lambda_sync']/(row['number_of_peers']*math.log(row['number_of_peers'],2)),3), axis=1)
 
 query_n = analyticsDF[(analyticsDF['lambda_sync']/(analyticsDF['number_of_peers'])).round(2).isin([0.02,0.04,0.06]) & (analyticsDF['lambda_generate'].isin([0.2,0.4,0.6]))]
-query_n['n'] = True
+query_n['dependence'] = 'n2'
 query_n['normalized_lambda_sync'] = query_n.apply(lambda row: round((row['lambda_sync']/row['number_of_peers']),2), axis=1)
 
 query = query_n.append(query_n2)
@@ -46,10 +46,13 @@ for lambda_generate in lambda_generate_list:
         print("nls:", nls)
         query_temp = query[ (query['lambda_generate']==lambda_generate) & query['normalized_lambda_sync'].isin(nls) ]
         point_plot = None
-        point_plot = sns.pointplot(x='number_of_peers', y='0.5-chain', hue='normalized_lambda_sync', data=query_temp)
+        point_plot = sns.lmplot(x='0.5-chain', y='orphaned_blocks', data=query_temp, fit_reg=False, hue='dependence')
         #g = sns.FacetGrid(query_temp, hue='normalized_lambda_sync')
         #g.map(sns.pointplot, 'number_of_peers', '0.5-chain')
-        fig = point_plot.get_figure()
-        img_name = (str(lambda_generate) + '_' + str(nls[0]) + '_' + str(nls[1]) + '_' + str(nls[2])).replace('.','') + '.png'
-        fig.savefig('plots/overlap_chain_length/'+img_name, dpi=400)
+        #fig = point_plot.get_figure()
+        #img_name = (str(lambda_generate) + '_' + str(nls[0]) + '_' + str(nls[1]) + '_' + str(nls[2])).replace('.','') + '.png'
+        #fig.savefig('plots/overlap_orphan/'+img_name, dpi=400)
         plt.show()
+
+# sns.lmplot(x='0.5-chain', y='orphaned_blocks', data=query, fit_reg=False, hue='dependence')
+# plt.show()
