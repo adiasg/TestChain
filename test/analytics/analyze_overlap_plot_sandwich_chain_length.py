@@ -18,7 +18,7 @@ for working_dir in os.listdir(data_dir):
         print("OSError for directory:", working_dir)
 
 analyticsDF['0.5-chain'] = analyticsDF['atleast_50%_agreed_chain']
-analyticsDF = analyticsDF[(analyticsDF['lambda_generate'].isin([0.2,0.4,0.6]))]
+# analyticsDF = analyticsDF[(analyticsDF['lambda_generate'].isin([0.2,0.4,0.6]))]
 
 # print('analyticsDF')
 # print("size:", analyticsDF.shape)
@@ -52,8 +52,8 @@ query = query[(query['simulation_time']==600) & (query['number_of_peers'].isin([
 # print("size:", query.shape)
 # print("unique:", query.working_dir.unique().shape)
 
-lambda_generate_list = [0.2, 0.4]
-nls_list = [ [0.02, 0.006, 0.002] ]
+lambda_generate_list = [0.2, 0.3, 0.4]
+nls_list = [ [0.06, 0.018, 0.007] ]
 #lambda_generate_list = [0.4]
 #nls_list = [ (0.04, 0.004) ]
 
@@ -66,13 +66,6 @@ for lambda_generate in lambda_generate_list:
         print('query_temp')
         print("size:", query_temp.shape)
         print("unique:", query_temp.working_dir.unique().shape)
-
-        # query_temp_10 = query_temp[query_temp['number_of_peers']==10]
-        # print('query_temp_10')
-        # print("size:", query_temp_10.shape)
-        # print("unique:", query_temp_10.working_dir.unique().shape)
-        #
-        # query_temp.to_csv('test_1.csv')
         point_plot = None
         point_plot = sns.pointplot(x='number_of_peers', y='0.5-chain', hue='normalized_lambda_sync', data=query_temp)
         #g = sns.FacetGrid(query_temp, hue='normalized_lambda_sync')
