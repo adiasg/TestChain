@@ -1,2 +1,2 @@
-,last_100%_agreed_block,last_add_time,latency,longest_100%_agreed_chain,orphaned_blocks,throughput
-0,00000bac0e8fdb11c92bf7450e4ee265b0474bc48c25351cbfad258ff6f82bd7,522.4604750000001,40.94486982142859,28,101,0.04666666666666667
+,last_100%_agreed_block,last_add_time,latency,longest_100%_agreed_chain,orphaned_blocks,throughput,atleast_50%_agreed_chain,atleast_50%_agreed_hash
+0,00000bac0e8fdb11c92bf7450e4ee265b0474bc48c25351cbfad258ff6f82bd7,522.4604750000002,40.9448698214286,28,101,0.04666666666666667,30.0,0000066a8a7d40e5ec1b2a85790f427ffd598138b3273b2264a336a9c4716a77

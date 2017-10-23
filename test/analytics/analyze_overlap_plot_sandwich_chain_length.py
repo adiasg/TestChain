@@ -52,10 +52,13 @@ query = query[(query['simulation_time']==600) & (query['number_of_peers'].isin([
 # print("size:", query.shape)
 # print("unique:", query.working_dir.unique().shape)
 
-lambda_generate_list = [0.2, 0.3, 0.4]
+# print(query.normalized_lambda_sync.unique())
+# print(query.lambda_generate.unique())
+
+lambda_generate_list = [0.25, 0.35]
 nls_list = [ [0.06, 0.018, 0.007] ]
-#lambda_generate_list = [0.4]
-#nls_list = [ (0.04, 0.004) ]
+# lambda_generate_list = []
+# nls_list = []
 
 for lambda_generate in lambda_generate_list:
     for nls in nls_list:
@@ -67,10 +70,13 @@ for lambda_generate in lambda_generate_list:
         print("size:", query_temp.shape)
         print("unique:", query_temp.working_dir.unique().shape)
         point_plot = None
-        point_plot = sns.pointplot(x='number_of_peers', y='0.5-chain', hue='normalized_lambda_sync', data=query_temp)
-        #g = sns.FacetGrid(query_temp, hue='normalized_lambda_sync')
-        #g.map(sns.pointplot, 'number_of_peers', '0.5-chain')
-        fig = point_plot.get_figure()
-        img_name = (str(lambda_generate) + '_' + str(nls[0]) + '_' + str(nls[1]) + '_' + str(nls[2])).replace('.','') + '.png'
-        fig.savefig('plots/sandwich/'+img_name, dpi=400)
-        plt.show()
+        try:
+            point_plot = sns.pointplot(x='number_of_peers', y='0.5-chain', hue='normalized_lambda_sync', data=query_temp)
+            #g = sns.FacetGrid(query_temp, hue='normalized_lambda_sync')
+            #g.map(sns.pointplot, 'number_of_peers', '0.5-chain')
+            fig = point_plot.get_figure()
+            img_name = (str(lambda_generate) + '_' + str(nls[0]) + '_' + str(nls[1]) + '_' + str(nls[2])).replace('.','') + '.png'
+            fig.savefig('plots/sandwich/'+img_name, dpi=400)
+            plt.show()
+        except ValueError:
+            print('ValueError')
